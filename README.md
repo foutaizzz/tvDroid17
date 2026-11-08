@@ -47,6 +47,25 @@ The script:
 5. Re-binds the accessibility service (`SourceKeyService`) so the SET/INPUT keys work
 6. Copies the TMDB token from `~/.config/tvhome/tmdb-token` onto the TV (optional)
 
+## Debloat (disable factory apps)
+
+`debloat/` holds per-TV-model lists of safe-to-disable packages. Everything is **disabled**
+(`pm disable-user`), never uninstalled — fully reversible.
+
+```bash
+# Linux / macOS — apply a list
+TV_HOST=192.168.1.xxx tools/disable.sh debloat/xiaomi-mi-tv-4a/debloat.txt
+# Undo + restore the stock launcher
+TV_HOST=192.168.1.xxx tools/restore.sh debloat/xiaomi-mi-tv-4a/debloat.txt
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost 192.168.1.xxx debloat\xiaomi-mi-tv-4a\debloat.txt
+powershell -ExecutionPolicy Bypass -File tools\restore.ps1 -TvHost 192.168.1.xxx debloat\xiaomi-mi-tv-4a\debloat.txt
+```
+
+See `debloat/README.md` for the supported TV models. To debloat another TV, list its
+packages (`tools/tv.py` shell → `pm list packages`) and add a `debloat/<model>/debloat.txt`.
+
 ## Run the instrumentation tests
 
 ```bash
@@ -67,7 +86,8 @@ launcher/
 │       │   └── AndroidManifest.xml
 │       └── androidTest/          # 17 instrumentation tests
 ├── gradle/                       # wrapper (Gradle 9.7.1)
-├── tools/                        # ADB helper scripts (tv.py, b64push.py, adbkey/)
+├── tools/                        # ADB helpers (tv.py, b64push.py, adbkey/) + disable/restore scripts
+├── debloat/                      # per-TV-model debloat lists (debloat.txt)
 ├── build-and-install.sh          # Linux/macOS install
 ├── build-and-install.ps1         # Windows install
 ├── run-tests.sh                  # test runner
