@@ -32,7 +32,6 @@ final class WeatherClockView extends View {
     private Bitmap dialCache;
     private Canvas dialCanvas;
     private String cachedWeatherKey="";
-    private final long began=android.os.SystemClock.elapsedRealtime();
     WeatherClockView(Context context){super(context);regular=context.getResources().getFont(R.font.clock_400);medium=context.getResources().getFont(R.font.clock_500);setBackgroundColor(Color.BLACK);}
     void setWeather(WeatherData value,boolean loading){weather=value;this.loading=loading;invalidate();}
     @Override protected void onDraw(Canvas canvas){

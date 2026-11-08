@@ -38,7 +38,6 @@ final class FrostedControls {
     private int surfaceColor = 0xC91C1C1E;
     void setSurfaceColor(int color) { surfaceColor = color; invalidateMaterials(); }
     private final Paint fullPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-    private final RectF fullArea = new RectF();
 
     void captureArtwork(ArtworkBackdropView artwork) {
         if (artwork.currentItem() == null) { clear(); return; }

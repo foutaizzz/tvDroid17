@@ -3,7 +3,6 @@ package com.gathin.tvhome;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.content.Intent;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
@@ -47,7 +46,6 @@ import android.widget.Toast;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
@@ -207,7 +205,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         artworkDetails = findViewById(R.id.artworkDetails);
         artworkView.setArtworkChangedListener(this::updateArtworkTarget);
         artworkTarget.setOnFocusChangeListener((v, focused) -> {
-            Log.d("FOCUS_DBG", "artworkTarget focus=" + focused);
             if (focused) findViewById(R.id.summaryScroll).scrollTo(0, 0);
             if (focused) beginTrailerFocus();
             else clearTrailerFocus();
@@ -711,7 +708,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private boolean focusArtwork() {
-        Log.d("FOCUS_DBG", "focusArtwork item=" + artworkView.currentItem() + " supports=" + PlayTorrioDetails.supports(artworkView.currentItem()));
         return PlayTorrioDetails.supports(artworkView.currentItem()) && artworkTarget.requestFocus();
     }
 
@@ -720,7 +716,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ArtworkPolicy.Item item = artworkView.currentItem();
         boolean available = PlayTorrioDetails.supports(item);
         boolean controlsVisible = artworkView.controlsVisible();
-        Log.d("FOCUS_DBG", "updateArtworkTarget available=" + available + " controlsVisible=" + controlsVisible + " vis=" + artworkTarget.getVisibility() + " focusable=" + artworkTarget.isFocusable());
         View details = findViewById(R.id.artworkDetails);
         long frameRevision = artworkView.frameRevision();
         boolean newFrame = frameRevision != detailsFrameRevision;
@@ -781,7 +776,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int target;
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             if (position < COLUMNS) {
-                Log.d("FOCUS_DBG", "UP dock pos=" + position + " item=" + artworkView.currentItem());
                 if (focusArtwork()) {
                     pendingArtworkFocus = RecyclerView.NO_POSITION;
                     return true;
