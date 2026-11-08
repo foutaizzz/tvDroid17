@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 960 x 540 dp corresponds to the television's 1920 x 1080 screenshot. -->
+    <dimen name="home_margin_horizontal">32dp</dimen>
+    <dimen name="home_margin_top">24dp</dimen>
+    <dimen name="tile_width">125dp</dimen>
+    <dimen name="tile_height">75dp</dimen>
+    <dimen name="tile_radius">14dp</dimen>
+    <dimen name="tile_row_height">102dp</dimen>
+    <dimen name="dock_inset">26dp</dimen>
+    <dimen name="dock_vertical_inset">20dp</dimen>
+    <dimen name="dock_radius">27dp</dimen>
+    <dimen name="dock_bottom_clearance">26dp</dimen>
+</resources>

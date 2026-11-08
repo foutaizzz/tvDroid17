@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="source_key_name" translatable="false">TV Home — touches Source et SET</string>
+    <string name="source_key_description" translatable="false">Ouvre les entrées HDMI / AV avec Source et le centre de contrôle avec SET. Ne lit pas le contenu de l’écran et ne collecte aucune donnée.</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="dock_apps">
+        <item>org.smarttube.beta</item>
+        <item>com.playtorrio.tv</item>
+        <item>tv.arte.plus7</item>
+        <item>com.spotify.tv.android</item>
+        <item>com.soundcloud.android</item>
+        <item>com.tailscale.ipn</item>
+    </string-array>
+
+    <string-array name="hidden_apps">
+        <item>com.mitv.tvhome.atv</item>
+        <item>com.mediatek.wwtv.tvcenter</item>
+        <item>com.mitv.gallery</item>
+    </string-array>
+
+    <string name="live_tv_package" translatable="false"></string>
+
+    <integer name="columns">6</integer>
+</resources>

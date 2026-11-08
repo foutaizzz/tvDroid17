@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Build the launcher APK and install it on the TV as the default home screen.
+set -euo pipefail
+cd "$(dirname "$0")"
+: "${TV_HOST:?set TV_HOST to the TV IP address, e.g. TV_HOST=TV_IP $0}"
+STOCK_LAUNCHER="${STOCK_LAUNCHER:-com.google.android.tvlauncher}"
+# Find a JDK and an Android SDK without Android Studio (Linux first, then macOS/Windows).
+if [ -z "${JAVA_HOME:-}" ]; then
+  for candidate in ~/android-tools/jdk /usr/lib/jvm/* /opt/homebrew/opt/openjdk@17; do
+    if [ -x "$candidate/bin/java" ]; then JAVA_HOME="$candidate"; break; fi
+  done
+fi
+: "${JAVA_HOME:?no JDK found; set JAVA_HOME}"
+export PATH="$JAVA_HOME/bin:$PATH"
+if [ -z "${ANDROID_HOME:-}" ] && [ -z "${ANDROID_SDK_ROOT:-}" ]; then
+  for candidate in ~/android-tools/sdk ~/Android/Sdk ~/Library/Android/sdk; do
+    if [ -d "$candidate/platforms" ]; then ANDROID_HOME="$candidate"; break; fi
+  done
+fi
+: "${ANDROID_HOME:?no Android SDK found; set ANDROID_HOME}"
+export ANDROID_HOME ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+[ -f local.properties ] || echo "sdk.dir=$ANDROID_HOME" > local.properties
+./gradlew assembleDebug -q --console=plain
+PY="${TV_PYTHON:-}"
+if [ -z "$PY" ]; then
+  for candidate in python3 tools/venv/bin/python tools/venv/Scripts/python.exe python3; do
+    if command -v "$candidate" >/dev/null 2>&1; then PY="$candidate"; break; fi
+  done
+fi
+: "${PY:?no Python interpreter found; set TV_PYTHON=/path/to/python}"
+export MSYS_NO_PATHCONV=1
+APK=app/build/outputs/apk/debug/app-debug.apk
+"$PY" -I tools/b64push.py "$APK" /data/local/tmp/tvhome.apk
+
+# The TMDB read token is not compiled into the APK: it is copied onto the television, where the
+# launcher reads it at startup. Keep it outside the project, in ~/.config/tvhome/tmdb-token.
+TOKEN_FILE="${TMDB_TOKEN_FILE:-$HOME/.config/tvhome/tmdb-token}"
+TOKEN=""
+if [ -f "$TOKEN_FILE" ]; then
+  TOKEN="$(tr -d '\r\n' < "$TOKEN_FILE")"
+fi
+if [ -z "$TOKEN" ]; then
+  TOKEN="${TMDB_READ_ACCESS_TOKEN:-}"
+fi
+if [ -z "$TOKEN" ]; then
+  echo "No TMDB token found at $TOKEN_FILE: trailers and French summaries will stay off."
+  echo "Put the token in that file (one line, no quotes) to enable them."
+fi
+
+printf '%s\n' \
+  "pm install -r /data/local/tmp/tvhome.apk" \
+  "rm -f /data/local/tmp/tvhome.apk" \
+  "pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.gathin.tvhome android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; pm grant com.gathin.tvhome android.permission.NEARBY_WIFI_DEVICES 2>/dev/null; echo wifi-granted" \
+  "settings put secure enabled_accessibility_services com.gathin.tvhome/com.gathin.tvhome.SourceKeyService" \
+  "settings put secure accessibility_enabled 1" \
+  "cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity" \
+  "pm disable-user --user 0 $STOCK_LAUNCHER" \
+  | "$PY" -I tools/tv.py --batch
+
+if [ -n "$TOKEN" ]; then
+  # Written into the app's own files, which survive an upgrade; the launcher reads it on start.
+  printf '%s\n' "echo '$TOKEN' | run-as com.gathin.tvhome sh -c 'cat > files/tmdb-token.txt'" \
+    | "$PY" -I tools/tv.py --batch
+  printf '%s\n' "run-as com.gathin.tvhome wc -c files/tmdb-token.txt 2>/dev/null || echo 0" \
+    | "$PY" -I tools/tv.py --batch
+fi
+echo "Installed. Press Home on the remote to see it."

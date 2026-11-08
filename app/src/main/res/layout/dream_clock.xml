@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Neutral typography and a true black canvas; no images, glow, seconds or network access. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="#FF000000">
+    <LinearLayout android:id="@+id/dreamContent" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center_horizontal">
+        <TextClock android:id="@+id/dreamTime" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:format12Hour="HH:mm" android:format24Hour="HH:mm"
+            android:textColor="#DFFFFFFF" android:textSize="104sp" android:fontFamily="sans-serif-light"
+            android:fontFeatureSettings="tnum" android:letterSpacing="-0.035" android:includeFontPadding="false" />
+        <TextClock android:id="@+id/dreamDate" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:format12Hour="EEEE d MMMM" android:format24Hour="EEEE d MMMM"
+            android:textColor="#99FFFFFF" android:textSize="18sp" android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0" android:includeFontPadding="false" />
+    </LinearLayout>
+</FrameLayout>
