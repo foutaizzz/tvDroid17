@@ -38,3 +38,16 @@ fusion.android.tv.demo
 com.google.android.tvlauncher
 com.google.android.tvrecommendations
 com.google.android.leanbacklauncher.recommendations
+
+# MediaTek TV stack, unused when the TV is only used with apps (no tuner, no live TV).
+# KEEP commented out — they are needed by hardware/remote or inputs:
+#   com.mediatek.hotkey.dispatcher  HotKeyService: dispatches physical remote key events
+#   com.mediatek.network            MediaTek network stack (Wi-Fi)
+#   com.mediatek.tvinput            TV/HDMI input service (HDMI-CEC passthrough)
+#   com.mediatek.tv.service         core TV service, required by other MediaTek components
+com.mediatek.wwtv.tvcenter          # "TV Center" app, shows up in the app grid
+com.mediatek.wwtv.webview           # internal WwTV webview
+com.mediatek.wwtv.setupwizard       # WwTV setup assistant
+com.mediatek.tv.agent               # TV agent (tuner/live-TV related)
+com.mediatek.tv.factory             # factory menu
+mediatek.factorymenu.ui             # factory menu UI

@@ -51,6 +51,18 @@ public class PolishInstrumentation extends Instrumentation {
             picture.eraseColor(0xFF354057);
             Field generationField = ArtworkSlideshow.class.getDeclaredField("generation"); generationField.setAccessible(true);
             int[] selectionGeneration = {0};
+            // onResume() refocuses a grid tile once the package list is applied (MainActivity
+            // focusTile in the reload callback); wait for that initial focus to settle so it
+            // cannot steal the focus we request below.
+            RecyclerView grid = activity.findViewById(R.id.grid);
+            long gridDeadline = SystemClock.elapsedRealtime() + 20_000;
+            while ((grid.getAdapter() == null || grid.getAdapter().getItemCount() == 0
+                    || grid.getChildCount() == 0) && SystemClock.elapsedRealtime() < gridDeadline)
+                SystemClock.sleep(100);
+            if (grid.getAdapter() == null || grid.getAdapter().getItemCount() == 0)
+                throw new AssertionError("App grid never populated");
+            waitForIdleSync();
+            SystemClock.sleep(500);
             checkMain(() -> {
                 slideshow.pause();
                 artwork.show(new CinemetaClient.Frame(item, picture, null));
@@ -60,7 +72,14 @@ public class PolishInstrumentation extends Instrumentation {
             });
             if (generationField.getInt(slideshow) != selectionGeneration[0])
                 throw new AssertionError("Selection invalidated the displayed title's pending logo");
-            SystemClock.sleep(300); waitForIdleSync();
+            // requestFocus() is asynchronous: wait until the artwork target really holds focus.
+            View targetEarly = activity.findViewById(R.id.artworkTarget);
+            long focusDeadline = SystemClock.elapsedRealtime() + 5_000;
+            while (!targetEarly.hasFocus() && SystemClock.elapsedRealtime() < focusDeadline)
+                SystemClock.sleep(50);
+            if (!targetEarly.hasFocus())
+                throw new AssertionError("artworkTarget never gained focus; currentFocus=" + activity.getCurrentFocus());
+            waitForIdleSync();
             checkMain(() -> {
                 View details = activity.findViewById(R.id.artworkDetails);
                 View target = activity.findViewById(R.id.artworkTarget);
@@ -92,7 +111,6 @@ public class PolishInstrumentation extends Instrumentation {
                 if (target.getBottom() > 700) throw new AssertionError("Details overlap dock: " + target.getBottom());
             });
             sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN);
-            RecyclerView grid = activity.findViewById(R.id.grid);
             if (grid.getWidth() != activity.findViewById(R.id.root).getWidth())
                 throw new AssertionError("Alpha layer can clip the expanded dock corners");
             checkMain(() -> grid.findViewHolderForAdapterPosition(0).itemView.findViewById(R.id.card).requestFocus());
