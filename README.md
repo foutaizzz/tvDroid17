@@ -27,7 +27,37 @@ devices over Wi-Fi ADB (no root required).
 - The TV in **Developer mode** with **USB debugging** (ADB over Wi-Fi) enabled
 - JDK 17+ (`JAVA_HOME` set, or auto-detected in `~/android-tools/jdk`, `/usr/lib/jvm/*`)
 - Android SDK (`ANDROID_HOME` set, or auto-detected)
-- Python 3 with `adb-shell`, `rsa`, `cryptography` (`pip install -r tools/requirements.txt`)
+- Python 3.8+ with the ADB client modules, installed in a virtualenv (see below)
+
+## Set up the Python environment (once)
+
+The helper scripts drive the TV over a pure-Python ADB client, so they need three modules.
+Install them in a virtualenv inside the project — the scripts run Python in isolated mode
+(`-I`), which hides the per-user directory where `pip install --user` puts them, and the
+virtualenv's own `site-packages` stays visible:
+
+```bash
+# Linux / macOS
+python3 -m venv tools/venv
+tools/venv/bin/pip install -r tools/requirements.txt
+
+# Windows PowerShell
+python -m venv tools\venv
+tools\venv\Scripts\pip.exe install -r tools\requirements.txt
+```
+
+The scripts pick `tools/venv` up automatically. To use another interpreter, set
+`TV_PYTHON=/path/to/python`.
+
+## First connection
+
+The ADB key is per machine and lives in `tools/adbkey/` (gitignored — it is never shared).
+On the very first run, the TV asks you to authorise the new key: a "Allow USB debugging?"
+prompt appears on screen, tick **Always allow from this device** and confirm it. After that,
+the scripts connect silently.
+
+If the key is ever rejected, delete `tools/adbkey/` and run the script again to generate a
+new one, then accept the new prompt on the TV.
 
 ## Build & install on the TV
 

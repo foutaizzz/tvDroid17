@@ -7,9 +7,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 LIST="${1:?usage: restore.sh <debloat list> [stock launcher package]}"
 STOCK="${2:-com.google.android.tvlauncher}"
-PY="${TV_PYTHON:-python3}"
+. tools/pyenv.sh
 export MSYS_NO_PATHCONV=1
-command -v "$PY" >/dev/null 2>&1 || { echo "python3 not found; run: pip install -r tools/requirements.txt"; exit 1; }
 {
   grep -vE '^\s*(#|$)' "$LIST" | sed -E 's/\s+#.*$//' | awk '{print "pm enable " $1}'
   echo "pm enable $STOCK"

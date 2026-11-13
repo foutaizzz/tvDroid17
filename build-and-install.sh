@@ -19,15 +19,13 @@ if [ -z "${ANDROID_HOME:-}" ] && [ -z "${ANDROID_SDK_ROOT:-}" ]; then
 fi
 : "${ANDROID_HOME:?no Android SDK found; set ANDROID_HOME}"
 export ANDROID_HOME ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-[ -f local.properties ] || echo "sdk.dir=$ANDROID_HOME" > local.properties
+# local.properties points at this machine's SDK, so always rewrite it: a copy carried over from
+# another machine (e.g. a Windows path) would point nowhere and break the build.
+echo "sdk.dir=$ANDROID_HOME" > local.properties
 ./gradlew assembleDebug -q --console=plain
-PY="${TV_PYTHON:-}"
-if [ -z "$PY" ]; then
-  for candidate in python3 tools/venv/bin/python tools/venv/Scripts/python.exe python3; do
-    if command -v "$candidate" >/dev/null 2>&1; then PY="$candidate"; break; fi
-  done
-fi
-: "${PY:?no Python interpreter found; set TV_PYTHON=/path/to/python}"
+# Picks a Python that can import the ADB modules (workspace venv first) and explains how to
+# install them if none can.
+. tools/pyenv.sh
 export MSYS_NO_PATHCONV=1
 APK=app/build/outputs/apk/debug/app-debug.apk
 "$PY" -I tools/b64push.py "$APK" /data/local/tmp/tvhome.apk

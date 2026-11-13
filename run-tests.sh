@@ -12,13 +12,7 @@ cd "$(dirname "$0")"
 FILTER="${1:-}"
 
 # Python: the workspace venv first (it carries the crypto module tv.py needs), then any python3.
-PY="${TV_PYTHON:-}"
-if [ -z "$PY" ]; then
-  for candidate in python3 python3 tools/venv/bin/python tools/venv/Scripts/python.exe python3; do
-    if command -v "$candidate" >/dev/null 2>&1; then PY="$candidate"; break; fi
-  done
-fi
-: "${PY:?no Python interpreter found; set TV_PYTHON=/path/to/python}"
+. tools/pyenv.sh
 export MSYS_NO_PATHCONV=1
 
 # JDK and Android SDK for Gradle, without Android Studio.

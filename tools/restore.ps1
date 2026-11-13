@@ -13,7 +13,17 @@ $OutputEncoding = New-Object System.Text.UTF8Encoding $false
 $repo = Split-Path -Parent $PSScriptRoot
 $List = (Resolve-Path $List).Path
 $py = if ($env:TV_PYTHON) { $env:TV_PYTHON } else { 'python' }
-if (-not (Get-Command $py -ErrorAction SilentlyContinue)) { throw 'python not found; run: pip install -r tools\requirements.txt' }
+# The workspace venv is preferred: the scripts run Python with -I (isolated mode), which hides
+# the per-user directory where "pip install --user" puts the ADB modules.
+$venvPy = Join-Path $repo 'tools\venv\Scripts\python.exe'
+if (-not $env:TV_PYTHON -and (Test-Path $venvPy)) { $py = $venvPy }
+if (-not (Get-Command $py -ErrorAction SilentlyContinue)) {
+    throw 'python not found; create the venv: python -m venv tools\venv ; tools\venv\Scripts\pip.exe install -r tools\requirements.txt'
+}
+& $py -I -c "import adb_shell" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    throw "the ADB modules are missing for '$py'. Run: tools\venv\Scripts\pip.exe install -r tools\requirements.txt"
+}
 if (-not $TvHost) { throw 'pass -TvHost <tv ip> or set $env:TV_HOST' }
 $env:TV_HOST = $TvHost
 

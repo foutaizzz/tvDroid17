@@ -20,9 +20,8 @@ PORT = int(os.environ.get("TV_PORT", "5555"))
 # Per-command read timeout in seconds; instrumentation runs can take minutes, so the test
 # script raises this. Defaults to 120 s for ordinary shell commands.
 SHELL_TIMEOUT = float(os.environ.get("TV_SHELL_TIMEOUT", "120"))
-if not HOST:
-    sys.exit("Set TV_HOST to your TV's IP address, e.g.  TV_HOST=TV_IP tools/tv.py --probe\n"
-             "(find it under Settings → Network, or look for the TV in `arp -a`)")
+# The TV address is checked in connect(), not at import time: this module is imported by
+# b64push.py, and exiting here would kill the caller instead of reporting a usable error.
 KEYDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "adbkey")
 KEY = os.path.join(KEYDIR, "adbkey")
 
@@ -39,6 +38,9 @@ def get_signer():
 
 
 def connect(timeout=120):
+    if not HOST:
+        sys.exit("Set TV_HOST to your TV's IP address, e.g.  TV_HOST=TV_IP tools/tv.py --probe\n"
+                 "(find it under Settings → Network, or look for the TV in `arp -a`)")
     dev = AdbDeviceTcp(HOST, PORT, default_transport_timeout_s=float(timeout))
     dev.connect(rsa_keys=[get_signer()], transport_timeout_s=float(timeout), auth_timeout_s=timeout)
     return dev
