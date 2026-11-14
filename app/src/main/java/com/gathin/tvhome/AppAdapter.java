@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.FeatureInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -51,6 +52,13 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         /** Called for D-pad direction on a tile. Return true when handled. */
         boolean onTileVerticalKey(int position, int keyCode);
         boolean onTileHorizontalKey(int position, int keyCode);
+
+        /** Long press on a tile: enter move mode. Return true when handled. */
+        boolean onTileLongClick(int position);
+        /** True while a tile is being moved; a short OK then validates instead of launching. */
+        boolean isEditing();
+        /** Short OK while editing: keep the new order and leave move mode. */
+        void onTileValidate();
     }
 
     static final class Entry {
@@ -78,6 +86,11 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     private final List<String> favourites;
     /** Never shown as tiles (res/values/config.xml, hidden_apps). */
     private final Set<String> hidden;
+    /** User-defined order of all visible packages, persisted; empty means "default" (favourites first). */
+    private List<String> order = new ArrayList<>();
+    private final SharedPreferences prefs;
+    private final Drawable editingBorder;
+    private int editingPosition = RecyclerView.NO_POSITION;
     private final List<Entry> items = new ArrayList<>();
     private final Set<String> changedPackages = new HashSet<>();
     private volatile boolean loaded, dirty = true;
@@ -91,6 +104,9 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         this.dockSize = dockSize;
         this.favourites = Arrays.asList(ctx.getResources().getStringArray(R.array.dock_apps));
         this.hidden = new HashSet<>(Arrays.asList(ctx.getResources().getStringArray(R.array.hidden_apps)));
+        this.prefs = ctx.getSharedPreferences("tvhome_ui", Context.MODE_PRIVATE);
+        this.editingBorder = ctx.getDrawable(R.drawable.tile_editing);
+        loadOrder();
         // Tiles keep their identity across reload(), so a focused tile stays on its app instead of
         // its view being rebound to whatever app now sits in that slot.
         setHasStableIds(true);
@@ -181,8 +197,10 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             String label = String.valueOf(ri.loadLabel(pm));
             fresh.add(new Entry(label, component, banner, icon));
         }
+        // A saved custom order wins; otherwise fall back to the compiled dock list, then alphabetical.
+        final List<String> ord = order.isEmpty() ? favourites : order;
         Collections.sort(fresh, (a, b) -> {
-            int fa = favourites.indexOf(a.pkg), fb = favourites.indexOf(b.pkg);
+            int fa = ord.indexOf(a.pkg), fb = ord.indexOf(b.pkg);
             if (fa >= 0 || fb >= 0) {
                 if (fa < 0) return 1;
                 if (fb < 0) return -1;
@@ -238,6 +256,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.card.setScaleX(focused ? FOCUS_SCALE : 1f);
         h.card.setScaleY(focused ? FOCUS_SCALE : 1f);
+        // Move-mode highlight: a foreground stroke, so the tile's own background is untouched.
+        h.card.setForeground(position == editingPosition ? editingBorder : null);
         if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
@@ -251,15 +271,18 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             h.label.setText(e.label);
             h.label.setVisibility(View.GONE);
         }
-        h.card.setOnClickListener(v -> launch(e));
-        h.card.setOnLongClickListener(v -> {
-            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                ctx.startActivity(i);
-            } catch (ActivityNotFoundException ignored) {
+        h.card.setOnClickListener(v -> {
+            // While moving a tile, a short OK validates the new position instead of launching the app.
+            if (listener != null && listener.isEditing()) {
+                listener.onTileValidate();
+                return;
             }
-            return true;
+            launch(e);
+        });
+        h.card.setOnLongClickListener(v -> {
+            int pos = h.getBindingAdapterPosition();
+            if (pos == RecyclerView.NO_POSITION) return true;
+            return listener != null && listener.onTileLongClick(pos);
         });
     }
 
@@ -301,6 +324,75 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
 
     String labelAt(int position) {
         return position >= 0 && position < items.size() ? items.get(position).label : "";
+    }
+
+    /** Package of the app at a position, or null. */
+    String pkgAt(int position) {
+        return position >= 0 && position < items.size() ? items.get(position).pkg : null;
+    }
+
+    // ---- move mode (long press) -------------------------------------------------
+
+    int getEditingPosition() {
+        return editingPosition;
+    }
+
+    void setEditingPosition(int position) {
+        editingPosition = position;
+        notifyDataSetChanged();
+    }
+
+    /** Copy of the current custom order (empty = default order) for undo on cancel. */
+    List<String> snapshotOrder() {
+        synchronized (items) {
+            return new ArrayList<>(order);
+        }
+    }
+
+    /** Swap the tiles at from/to, persist the new order, and animate the move. Must run on the main thread. */
+    void moveItem(int from, int to) {
+        synchronized (items) {
+            if (from == to || from < 0 || to < 0 || from >= items.size() || to >= items.size()) return;
+            if (order.isEmpty()) for (Entry e : items) order.add(e.pkg);
+            Entry e = items.remove(from);
+            items.add(to, e);
+            String pkg = order.remove(from);
+            order.add(to, pkg);
+        }
+        saveOrder();
+        notifyItemMoved(from, to);
+    }
+
+    /** Restore a previously snapshotted order (undo) and re-sort. Must run on the main thread. */
+    void restoreOrder(List<String> saved) {
+        synchronized (items) {
+            order = new ArrayList<>(saved);
+        }
+        saveOrder();
+        dirty = true;
+        reload();
+    }
+
+    private void loadOrder() {
+        String saved = prefs.getString("app_order", "");
+        List<String> parsed = new ArrayList<>();
+        if (saved != null && !saved.isEmpty())
+            for (String pkg : saved.split(";")) if (!pkg.isEmpty()) parsed.add(pkg);
+        order = parsed;
+    }
+
+    private void saveOrder() {
+        prefs.edit().putString("app_order", String.join(";", order)).apply();
+    }
+
+    /** System "app details" screen, moved out of the tile long-press into the control panel. */
+    static void openDetails(Context ctx, String pkg) {
+        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            ctx.startActivity(i);
+        } catch (ActivityNotFoundException ignored) {
+        }
     }
 
     static final class Holder extends RecyclerView.ViewHolder {

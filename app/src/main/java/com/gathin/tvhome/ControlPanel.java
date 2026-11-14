@@ -16,14 +16,15 @@ import android.widget.TextView;
 /** Separate glass controls matching the asymmetric tvOS reference, without an enclosing card. */
 final class ControlPanel {
     static final int POWER = 0, SETTINGS = 1, WIFI = 2, AUDIO = 3, TIMER = 4,
-            DEVICES = 5, CAPTIONS = 6, SOURCES = 7, APPS = 8, HOME = 9, CONTROL = 10;
+            DEVICES = 5, CAPTIONS = 6, SOURCES = 7, APPS = 8, HOME = 9, CONTROL = 10,
+            APP_INFO = 11; // not a visible tile: long-press on APPS opens the focused app's details
     private final Activity activity;
     private final float density;
     private final View anchor;
     private final PopupWindow popup;
     private final FrameLayout sheet;
     private final FrameLayout controls;
-    private final View[] buttons = new View[11];
+    private final View[] buttons = new View[12];
     private final FrostedControls glass;
     private final boolean ownsGlass;
     private ArtworkBackdropView artwork;
@@ -80,7 +81,7 @@ final class ControlPanel {
         circle(DEVICES, "Manettes et accessoires Bluetooth", R.drawable.ic_gamepad, actions[DEVICES], 13);
         circle(CAPTIONS, "Sous-titres", R.drawable.ic_accessibility, actions[CAPTIONS], 71);
         circle(SOURCES, "Sources HDMI et AV", R.drawable.ic_input, actions[SOURCES], 129);
-        circle(APPS, "Applications", R.drawable.ic_apps, actions[APPS], 187);
+        circle(APPS, "Applications (appui long : infos de l’app sélectionnée)", R.drawable.ic_apps, actions[APPS], 187);
 
         for (int i = 0; i < buttons.length; i++) {
             final int index = i;
@@ -97,6 +98,13 @@ final class ControlPanel {
                 return true;
             });
         }
+        // Long-press on the Applications tile: open the system details of the app currently
+        // focused in the grid (the tile long-press itself now moves the tile).
+        if (buttons[APPS] != null) buttons[APPS].setOnLongClickListener(v -> {
+            dismiss();
+            if (actions.length > APP_INFO && actions[APP_INFO] != null) anchor.post(actions[APP_INFO]);
+            return true;
+        });
         popup = new PopupWindow(overlay, -1, -1, true);
         popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popup.setElevation(0);

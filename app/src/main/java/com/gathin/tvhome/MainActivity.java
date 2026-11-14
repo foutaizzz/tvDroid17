@@ -145,6 +145,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** App of the last focused tile, so focus follows it when the app list changes. */
     private static String lastFocusedKey;
     private float density;
+    /** Move mode (long press on a tile): position of the tile being moved, or NO_POSITION. */
+    private int editingPosition = RecyclerView.NO_POSITION;
+    /** Order snapshot taken when move mode starts, restored on cancel (Back). */
+    private java.util.List<String> editingBackup;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     /** Refreshes the network pill when the connection changes: at boot Wi-Fi often connects after Home is shown. */
@@ -415,6 +419,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onBackPressed() {
+        if (editingPosition != RecyclerView.NO_POSITION) {
+            exitEditing(true);   // Back cancels the move and restores the previous order
+            return;
+        }
         if (inputPopup != null && inputPopup.isShowing()) {
             dismissInputs();
             return;
@@ -772,6 +780,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public boolean onTileVerticalKey(int position, int keyCode) {
+        if (editingPosition != RecyclerView.NO_POSITION) {
+            moveEditingVertical(position, keyCode);
+            return true;
+        }
         int count = adapter.getItemCount();
         int target;
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
@@ -799,6 +811,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public boolean onTileHorizontalKey(int position, int keyCode) {
+        if (editingPosition != RecyclerView.NO_POSITION) {
+            moveEditingHorizontal(position, keyCode);
+            return true;
+        }
         int count = adapter.getItemCount();
         int rowStart = (position / COLUMNS) * COLUMNS;
         int rowEnd = Math.min(rowStart + COLUMNS, count) - 1;
@@ -825,6 +841,77 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // upward to the settings capsule or into another focusable view.
         if (rowEnd + 1 < count) focusTile(rowEnd + 1);
         return true;
+    }
+
+    // ---- move mode (long press on OK) -------------------------------------------
+
+    @Override
+    public boolean onTileLongClick(int position) {
+        if (editingPosition != RecyclerView.NO_POSITION) return true; // already moving
+        editingPosition = position;
+        editingBackup = adapter.snapshotOrder();
+        adapter.setEditingPosition(position);
+        Toast.makeText(this, "Déplacer : flèches pour déplacer, OK pour valider, Retour pour annuler",
+                Toast.LENGTH_LONG).show();
+        return true;
+    }
+
+    @Override
+    public boolean isEditing() {
+        return editingPosition != RecyclerView.NO_POSITION;
+    }
+
+    @Override
+    public void onTileValidate() {
+        exitEditing(false);
+    }
+
+    /** Swap the moved tile with the neighbour in the given direction, like normal navigation. */
+    private void moveEditingVertical(int position, int keyCode) {
+        int count = adapter.getItemCount();
+        int target = -1;
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            if (position < COLUMNS) return;            // stay in the dock, never jump to the artwork
+            target = position - COLUMNS;
+        } else {
+            int lastRowStart = ((count - 1) / COLUMNS) * COLUMNS;
+            if (position >= lastRowStart) return;      // already on the last row
+            target = Math.min(position + COLUMNS, count - 1);
+        }
+        moveEditingTo(target);
+    }
+
+    private void moveEditingHorizontal(int position, int keyCode) {
+        int count = adapter.getItemCount();
+        int rowStart = (position / COLUMNS) * COLUMNS;
+        int rowEnd = Math.min(rowStart + COLUMNS, count) - 1;
+        int target = -1;
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+            if (position > rowStart) target = position - 1;
+            else if (rowStart >= COLUMNS) target = rowStart - 1;   // wrap to the previous row's end
+        } else {
+            if (position < rowEnd) target = position + 1;
+            else if (rowEnd + 1 < count) target = rowEnd + 1;       // wrap to the next row's start
+        }
+        moveEditingTo(target);
+    }
+
+    private void moveEditingTo(int target) {
+        if (target < 0 || target == editingPosition) return;
+        adapter.moveItem(editingPosition, target);
+        editingPosition = target;
+        adapter.setEditingPosition(target);
+        focusTile(target);
+    }
+
+    private void exitEditing(boolean cancel) {
+        int pos = editingPosition;
+        editingPosition = RecyclerView.NO_POSITION;
+        adapter.setEditingPosition(RecyclerView.NO_POSITION);
+        if (cancel && editingBackup != null) adapter.restoreOrder(editingBackup);
+        editingBackup = null;
+        if (pos != RecyclerView.NO_POSITION && adapter.getItemCount() > 0)
+            focusTile(Math.min(pos, adapter.getItemCount() - 1));
     }
 
     private void focusTile(int position) {
@@ -925,7 +1012,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (controlPanel != null) controlPanel.dismiss();
         {
-            Runnable[] actions = new Runnable[11];
+            Runnable[] actions = new Runnable[12];
             actions[ControlPanel.POWER] = this::showPowerOptions;
             actions[ControlPanel.SETTINGS] = () -> open(DeviceSettingsActivity.intent(this, "device"));
             actions[ControlPanel.WIFI] = () -> open(DeviceSettingsActivity.intent(this, "wifi"));
@@ -935,6 +1022,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             actions[ControlPanel.CAPTIONS] = () -> open(DeviceSettingsActivity.intent(this, "captions"));
             actions[ControlPanel.SOURCES] = this::showInputs;
             actions[ControlPanel.APPS] = () -> focusTile(Math.min(COLUMNS, adapter.getItemCount() - 1));
+            // Long-press on the Applications tile: system details of the currently focused app.
+            actions[ControlPanel.APP_INFO] = () -> {
+                String pkg = adapter.pkgAt(lastFocused);
+                if (pkg != null) AppAdapter.openDetails(this, pkg);
+            };
             actions[ControlPanel.HOME] = () -> focusTile(Math.min(lastFocused, COLUMNS - 1));
             String network = btnWifi.getTooltipText() == null ? "" : btnWifi.getTooltipText().toString();
             if (network.equals(getString(R.string.wifi))) network = hasInternet() ? "Connecté" : "";
