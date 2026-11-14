@@ -13,6 +13,8 @@
         <item>com.mitv.tvhome.atv</item>
         <item>com.mediatek.wwtv.tvcenter</item>
         <item>com.mitv.gallery</item>
+        <!-- two leanback activities -> two tiles; hidden by package so both disappear -->
+        <item>com.soundcloud.android</item>
     </string-array>
 
     <string name="live_tv_package" translatable="false"></string>
