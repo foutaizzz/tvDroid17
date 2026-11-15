@@ -45,7 +45,11 @@ com.google.android.leanbacklauncher.recommendations
 #   com.mediatek.network            MediaTek network stack (Wi-Fi)
 #   com.mediatek.tvinput            TV/HDMI input service (HDMI-CEC passthrough)
 #   com.mediatek.tv.service         core TV service, required by other MediaTek components
-com.mediatek.wwtv.tvcenter          # "TV Center" app, shows up in the app grid
+#   com.mediatek.wwtv.tvcenter      handles the passthrough intent (ACTION_VIEW +
+#                                   vnd.android.cursor.item/channel): without it every HDMI
+#                                   entry fails with "not available", in this launcher AND in
+#                                   the stock one. It stays enabled but is hidden from the
+#                                   app grid (see hidden_apps in config.xml).
 com.mediatek.wwtv.webview           # internal WwTV webview
 com.mediatek.wwtv.setupwizard       # WwTV setup assistant
 com.mediatek.tv.agent               # TV agent (tuner/live-TV related)
