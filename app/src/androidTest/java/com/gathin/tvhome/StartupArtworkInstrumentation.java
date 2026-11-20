@@ -5,6 +5,7 @@ import android.app.Instrumentation;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.view.View;
 
 /** First usable backdrop after creating HOME; no power action or system reboot. */
 public class StartupArtworkInstrumentation extends Instrumentation {
@@ -23,6 +24,9 @@ public class StartupArtworkInstrumentation extends Instrumentation {
                 if (!ready[0]) SystemClock.sleep(25);
             }
             if (!ready[0]) throw new AssertionError("No first backdrop within 30s");
+            boolean[] revealed = {false};
+            runOnMainSync(() -> revealed[0] = activity.findViewById(R.id.startupCover).getVisibility() == View.GONE);
+            if (!revealed[0]) throw new AssertionError("Launcher chrome stayed covered after the first complete slide");
             result.putLong("first_backdrop_ms", SystemClock.elapsedRealtime() - start);
             finish(Activity.RESULT_OK, result);
         } catch (Throwable failure) {

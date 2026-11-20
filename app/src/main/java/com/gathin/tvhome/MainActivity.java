@@ -82,6 +82,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
     static int COLUMNS = 4;
     private static final long MINUTE_MS = 60_000L;
+    private static final long STARTUP_ARTWORK_GRACE_MS = 10_000L;
     private String liveTvPkg;
 
     private AppAdapter adapter;
@@ -92,6 +93,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ArtworkBackdropView artworkView;
     private View artworkTarget, artworkHint;
     private View artworkDetails;
+    private View startupCover;
     private TrailerClient trailerClient;
     private final ExecutorService trailerWorker = Executors.newSingleThreadExecutor();
     private Future<?> trailerLookup;
@@ -151,6 +153,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private java.util.List<String> editingBackup;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable startupCoverTimeout = this::revealStartupContent;
     /** Refreshes the network pill when the connection changes: at boot Wi-Fi often connects after Home is shown. */
     private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
         @Override
@@ -189,6 +192,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         root = findViewById(R.id.root);
         disableSoundEffects(root);
         artworkView = findViewById(R.id.artwork);
+        startupCover = findViewById(R.id.startupCover);
         File testFiles = getExternalFilesDir(null);
         if (BuildConfig.DEBUG && testFiles != null) {
             File reference = new File(testFiles, "control-reference.jpg");
@@ -207,7 +211,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         artworkTarget = findViewById(R.id.artworkTarget);
         artworkHint = findViewById(R.id.artworkHint);
         artworkDetails = findViewById(R.id.artworkDetails);
-        artworkView.setArtworkChangedListener(this::updateArtworkTarget);
+        artworkView.setArtworkChangedListener(() -> {
+            updateArtworkTarget();
+            // ArtworkSlideshow only commits a frame after its background and logo (or text
+            // fallback) are ready. Reveal the artwork and launcher chrome in the same draw.
+            if (artworkView.currentItem() != null) revealStartupContent();
+        });
         artworkTarget.setOnFocusChangeListener((v, focused) -> {
             if (focused) findViewById(R.id.summaryScroll).scrollTo(0, 0);
             if (focused) beginTrailerFocus();
@@ -338,6 +347,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onResume() {
         super.onResume();
         homeResumed = true;
+        startupCover.setVisibility(View.VISIBLE);
+        handler.removeCallbacks(startupCoverTimeout);
+        handler.postDelayed(startupCoverTimeout, STARTUP_ARTWORK_GRACE_MS);
         foreground = new java.lang.ref.WeakReference<>(this);
         drawerScrollGeneration++;
         browsingApps = false;
@@ -368,6 +380,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
     }
 
+    private void revealStartupContent() {
+        if (!homeResumed || startupCover == null) return;
+        handler.removeCallbacks(startupCoverTimeout);
+        startupCover.setVisibility(View.GONE);
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -389,6 +407,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         drawerScrollGeneration++;
         if (controlPanel != null) controlPanel.dismiss();
         if (settingsMenu != null) settingsMenu.dismiss();
+        handler.removeCallbacks(startupCoverTimeout);
         artworkSlideshow.pause();
         adapter.cancelPendingReload();
         clearTrailerFocus();

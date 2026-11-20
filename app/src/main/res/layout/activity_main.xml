@@ -81,4 +81,8 @@
             android:background="@drawable/watch_button" android:visibility="invisible" />
         </LinearLayout>
     </FrameLayout>
+    <View android:id="@+id/startupCover" android:layout_width="match_parent"
+        android:layout_height="match_parent" android:background="#FF000000"
+        android:visibility="visible" android:clickable="true" android:focusable="false"
+        android:importantForAccessibility="no" />
 </FrameLayout>

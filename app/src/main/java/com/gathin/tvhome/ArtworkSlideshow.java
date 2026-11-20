@@ -144,7 +144,6 @@ final class ArtworkSlideshow {
         final List<ArtworkPolicy.Item> known = catalogue;
         final boolean refresh = known.isEmpty() || SystemClock.elapsedRealtime() - catalogueTime >= CATALOGUE_AGE_MS;
         final int slot = target;
-        final boolean firstBackdrop = displayedPosition < 0;
         requestedPosition = slot;
         pending = worker.submit(() -> {
             try {
@@ -159,13 +158,10 @@ final class ArtworkSlideshow {
                     store.save(items);
                 });
                 ArtworkPolicy.Item item = items.get(slot % items.size());
-                // A subsequent slide is committed once, with its logo or definitive text fallback.
-                // Only the first background may appear early, with its pending title hidden.
-                CinemetaClient.Frame frame;
-                if (firstBackdrop) {
-                    CinemetaClient.Frame background = client.loadBackground(item);
-                    frame = new CinemetaClient.Frame(item, background.background, null, true);
-                } else frame = client.load(item);
+                // Publish a slide only after its background and optional logo have both resolved.
+                // loadLogo returns null when no usable logo exists, so the title is then shown as
+                // the definitive fallback instead of appearing before a logo that is still loading.
+                CinemetaClient.Frame frame = client.load(item);
                 main.post(() -> {
                     if (version != generation || !resumed || !online) return;
                     catalogue = items;
@@ -181,12 +177,6 @@ final class ArtworkSlideshow {
                     loadFrenchDescription(item, frame.item.description);
                     scheduleNext(INTERVAL_MS);
                 });
-                if (firstBackdrop) {
-                    android.graphics.Bitmap logo = client.loadLogo(item);
-                    main.post(() -> {
-                        if (version == generation && resumed && online) view.updateLogo(item, logo);
-                    });
-                }
             } catch (IOException | RuntimeException unavailable) {
                 android.util.Log.w("TvHomeArtwork", "Cinemeta artwork unavailable", unavailable);
                 main.post(() -> {
