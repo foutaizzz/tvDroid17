@@ -219,6 +219,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         artworkTarget.setOnFocusChangeListener((v, focused) -> {
             if (focused) findViewById(R.id.summaryScroll).scrollTo(0, 0);
+            if (focused) artworkView.setBackdropBlurred(false);
             if (focused) beginTrailerFocus();
             else clearTrailerFocus();
             artworkSlideshow.setHeld(focused);
@@ -235,6 +236,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         artworkTarget.setOnKeyListener((v, key, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (key == KeyEvent.KEYCODE_DPAD_CENTER || key == KeyEvent.KEYCODE_ENTER) {
+                if (event.getRepeatCount() == 0 && PlayTorrioDetails.isInstalled(this)) {
+                    Intent detail = PlayTorrioDetails.intent(artworkView.currentItem());
+                    if (detail != null) open(detail);
+                }
+                return true;
+            }
             if (key == KeyEvent.KEYCODE_DPAD_UP) {
                 if (((SummaryScrollView) findViewById(R.id.summaryScroll)).moveReadingPosition(-1)) return true;
                 if (event.getRepeatCount() > 0) return true;
@@ -254,6 +262,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return true;
             }
             return false;
+        });
+        artworkTarget.setOnClickListener(v -> {
+            if (!PlayTorrioDetails.isInstalled(this)) return;
+            Intent detail = PlayTorrioDetails.intent(artworkView.currentItem());
+            if (detail != null) open(detail);
         });
         btnWifi = findViewById(R.id.btnWifi);
 
@@ -346,6 +359,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        ScreensaverBacklight.restore(this);
+        updateArtworkTarget();
+        artworkView.setBackdropBlurred(false);
         homeResumed = true;
         startupCover.setVisibility(View.VISIBLE);
         handler.removeCallbacks(startupCoverTimeout);
@@ -401,6 +417,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onPause() {
         super.onPause();
+        artworkView.setBackdropBlurred(false);
         homeResumed = false;
         if (foreground.get() == this) foreground.clear();
         dismissInputs();
@@ -431,6 +448,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancelTrailerLookup();
         trailerWorker.shutdownNow();
         artworkSlideshow.close();
+        artworkView.close();
         unregisterReceiver(packagesChanged);
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         if (cm != null) cm.unregisterNetworkCallback(networkCallback);
@@ -662,6 +680,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onTileFocused(int position, View card) {
+        artworkView.setBackdropBlurred(position >= COLUMNS);
         if (pendingArtworkFocus != RecyclerView.NO_POSITION && pendingArtworkFocus != position)
             pendingArtworkFocus = RecyclerView.NO_POSITION;
         int verticalDirection = position == pendingVerticalTarget ? pendingVerticalDirection : 0;
@@ -735,13 +754,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private boolean focusArtwork() {
-        return PlayTorrioDetails.supports(artworkView.currentItem()) && artworkTarget.requestFocus();
+        return PlayTorrioDetails.isInstalled(this)
+                && PlayTorrioDetails.supports(artworkView.currentItem()) && artworkTarget.requestFocus();
     }
 
     private void updateArtworkTarget() {
         boolean hadFocus = artworkTarget.hasFocus();
         ArtworkPolicy.Item item = artworkView.currentItem();
-        boolean available = PlayTorrioDetails.supports(item);
+        boolean available = PlayTorrioDetails.isInstalled(this) && PlayTorrioDetails.supports(item);
         boolean controlsVisible = artworkView.controlsVisible();
         View details = findViewById(R.id.artworkDetails);
         long frameRevision = artworkView.frameRevision();

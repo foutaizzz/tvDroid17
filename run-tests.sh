@@ -2,13 +2,13 @@
 # Build the launcher + its instrumentation tests, install both on the TV, and run every
 # instrumentation class, reporting PASS/FAIL per test.
 #
-#   TV_HOST=TV_IP ./run-tests.sh                 run everything
-#   TV_HOST=TV_IP ./run-tests.sh FadePerformance only tests matching a name
+#   TV_HOST=192.168.1.xxx ./run-tests.sh                 run everything
+#   TV_HOST=192.168.1.xxx ./run-tests.sh FadePerformance only tests matching a name
 #
 # Works on Linux without Android Studio: it finds a Python (venv) and a JDK/SDK by itself.
 set -euo pipefail
 cd "$(dirname "$0")"
-: "${TV_HOST:?set TV_HOST to the TV IP address, e.g. TV_HOST=TV_IP $0}"
+: "${TV_HOST:?set TV_HOST to the TV IP address, e.g. TV_HOST=192.168.1.xxx $0}"
 FILTER="${1:-}"
 
 # Python: the workspace venv first (it carries the crypto module tv.py needs), then any python3.

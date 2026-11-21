@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.FeatureInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -157,6 +158,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         // with a D-pad as long as they do not require a touchscreen (same rule as Play on TV).
         Map<ComponentName, ResolveInfo> found = new LinkedHashMap<>();
         Set<ComponentName> leanbackOnly = new HashSet<>();
+        Map<String, Boolean> systemPackages = new HashMap<>();
         Intent leanbackProbe = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
         for (ResolveInfo ri : pm.queryIntentActivities(leanbackProbe, 0)) {
             if (ri.activityInfo == null) continue;
@@ -181,9 +183,15 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         synchronized (changedPackages) {
             changed = new HashSet<>(changedPackages);
         }
+        Set<String> seenPackages = new HashSet<>();
         for (ResolveInfo ri : found.values()) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
+            // A package with several launcher activities is still one app tile.
+            if (!seenPackages.add(pkg)) continue;
+            int appFlags = ri.activityInfo.applicationInfo.flags;
+            systemPackages.put(pkg, (appFlags & (ApplicationInfo.FLAG_SYSTEM
+                    | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0);
             if (pkg.equals(ctx.getPackageName()) || hidden.contains(pkg)) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
             Entry cached = previous.get(component);
@@ -208,6 +216,14 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             }
             return a.label.compareToIgnoreCase(b.label);
         });
+        // Keep the apps already placed in the dock, but show only user-installed apps in the grid.
+        // The dock positions are resolved before filtering so pinned system apps keep their slots.
+        Set<String> dockPackages = new HashSet<>();
+        for (int i = 0; i < Math.min(dockSize, fresh.size()); i++) {
+            dockPackages.add(fresh.get(i).pkg);
+        }
+        fresh.removeIf(entry -> systemPackages.getOrDefault(entry.pkg, false)
+                && !dockPackages.contains(entry.pkg));
         return fresh;
     }
 
@@ -342,10 +358,12 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         notifyDataSetChanged();
     }
 
-    /** Copy of the current custom order (empty = default order) for undo on cancel. */
+    /** Copy the visible order for undo; stored order may contain removed packages. */
     List<String> snapshotOrder() {
         synchronized (items) {
-            return new ArrayList<>(order);
+            List<String> visibleOrder = new ArrayList<>(items.size());
+            for (Entry entry : items) visibleOrder.add(entry.pkg);
+            return visibleOrder;
         }
     }
 
@@ -353,11 +371,12 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     void moveItem(int from, int to) {
         synchronized (items) {
             if (from == to || from < 0 || to < 0 || from >= items.size() || to >= items.size()) return;
-            if (order.isEmpty()) for (Entry e : items) order.add(e.pkg);
             Entry e = items.remove(from);
             items.add(to, e);
-            String pkg = order.remove(from);
-            order.add(to, pkg);
+            // Adapter positions refer only to visible entries. The stored order can contain
+            // uninstalled or hidden packages, so rebuild it from the visible list after moving.
+            order = new ArrayList<>(items.size());
+            for (Entry entry : items) order.add(entry.pkg);
         }
         saveOrder();
         notifyItemMoved(from, to);

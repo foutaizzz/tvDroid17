@@ -32,7 +32,9 @@ final class ArtworkSlideshow {
     private int descriptionGeneration;
     private int failedPosition = -1;
     private int consecutiveFailures;
-    private boolean resumed, online, held, manualNavigation;
+    private long remainingAutoAdvanceMs = INTERVAL_MS;
+    private long nextDeadline;
+    private boolean resumed, online, held;
     private Future<?> pending;
     private Future<?> pendingDescription;
     private final Set<String> descriptionRequests = Collections.synchronizedSet(new HashSet<>());
@@ -48,7 +50,6 @@ final class ArtworkSlideshow {
 
     void resume(boolean connected) {
         held = false;
-        manualNavigation = false;
         resumed = true;
         online = connected;
         consecutiveFailures = 0;
@@ -68,7 +69,6 @@ final class ArtworkSlideshow {
     void pause() {
         resumed = false;
         held = false;
-        manualNavigation = false;
         cancelAndClear();
         cancelDescriptionLoads();
     }
@@ -90,11 +90,13 @@ final class ArtworkSlideshow {
             }
             return;
         }
+        if (selected && nextDeadline > 0L)
+            remainingAutoAdvanceMs = Math.max(0L, nextDeadline - SystemClock.elapsedRealtime());
         main.removeCallbacks(next);
+        nextDeadline = 0L;
         held = selected;
-        if (selected) manualNavigation = false;
         if (selected) cancelPendingForSelection();
-        else if (resumed && online) main.postDelayed(next, INTERVAL_MS);
+        else if (resumed && online) postNext(remainingAutoAdvanceMs);
     }
 
     private void cancelPendingForSelection() {
@@ -111,7 +113,6 @@ final class ArtworkSlideshow {
     /** Manual navigation stays available while the automatic carousel is held on selection. */
     void move(int direction) {
         if (!resumed || !online || catalogue.isEmpty() || direction == 0) return;
-        manualNavigation = true;
         int from = requestedPosition >= 0 ? requestedPosition
                 : failedPosition >= 0 ? failedPosition : displayedPosition;
         int target = Math.floorMod(Math.max(0, from) + (direction < 0 ? -1 : 1), catalogue.size());
@@ -131,11 +132,15 @@ final class ArtworkSlideshow {
         requestedPosition = -1;
         failedPosition = -1;
         displayedPosition = -1;
+        remainingAutoAdvanceMs = INTERVAL_MS;
+        nextDeadline = 0L;
         view.clear();
     }
 
     private void loadNext() {
-        if (!resumed || !online || !ArtworkPolicy.canAutoAdvance(held, manualNavigation)) return;
+        nextDeadline = 0L;
+        remainingAutoAdvanceMs = INTERVAL_MS;
+        if (!resumed || !online || !ArtworkPolicy.canAutoAdvance(held)) return;
         loadSlot(position, false);
     }
 
@@ -197,8 +202,15 @@ final class ArtworkSlideshow {
 
     private void scheduleNext(long delay) {
         main.removeCallbacks(next);
-        if (ArtworkPolicy.canAutoAdvance(held, manualNavigation) && resumed && online)
-            main.postDelayed(next, delay);
+        nextDeadline = 0L;
+        remainingAutoAdvanceMs = delay;
+        if (ArtworkPolicy.canAutoAdvance(held) && resumed && online) postNext(delay);
+    }
+
+    private void postNext(long delay) {
+        remainingAutoAdvanceMs = delay;
+        nextDeadline = SystemClock.elapsedRealtime() + delay;
+        main.postDelayed(next, delay);
     }
 
     private void loadFrenchDescription(ArtworkPolicy.Item item, String fallback) {

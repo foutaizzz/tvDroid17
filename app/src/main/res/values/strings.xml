@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Accueil</string>
+    <string name="app_name">tvDroid 17</string>
     <string name="inputs">Sources</string>
     <string name="wifi">Wi-Fi</string>
     <string name="settings">Réglages</string>
@@ -10,7 +10,7 @@
     <string name="no_inputs">Aucune source trouvée</string>
     <string name="ethernet">Ethernet</string>
     <string name="offline">Hors ligne</string>
-    <string name="wifi_permission_needed">Accordez la permission Localisation à « Accueil » pour afficher le nom du réseau Wi-Fi.</string>
+    <string name="wifi_permission_needed">Accordez la permission Localisation à « tvDroid 17 » pour afficher le nom du réseau Wi-Fi.</string>
     <string name="not_available">Non disponible sur cette TV</string>
     <string name="cant_open">"Impossible d'ouvrir %1$s"</string>
     <string name="dream_name">Horloge</string>

@@ -74,7 +74,7 @@ final class ControlPanel {
         controlFocus.setAlpha(0f);
         sheet.addView(controlFocus, new FrameLayout.LayoutParams(dp(28), dp(28)));
         tile(POWER, "Alimentation", null, R.drawable.ic_power, actions[POWER], 12, 44, 109, 112, true);
-        tile(SETTINGS, "Préférences de l’appareil", null, R.drawable.ic_settings, actions[SETTINGS], 129, 104, 109, 52, false);
+        tile(SETTINGS, "Réglages", null, R.drawable.ic_settings, actions[SETTINGS], 129, 104, 109, 52, false);
         tile(WIFI, "Wi-Fi", wifiName, R.drawable.ic_wifi, actions[WIFI], 129, 44, 109, 52, false);
         tile(AUDIO, "Audio", null, R.drawable.ic_sound, actions[AUDIO], 12, 164, 109, 52, false);
         tile(TIMER, "Minuteur", null, R.drawable.ic_timer, actions[TIMER], 129, 164, 109, 52, false);
@@ -125,7 +125,8 @@ final class ControlPanel {
             if (currentArtwork != null) {
                 currentArtwork.setControlsVisible(false);
                 // hidden[] is filled in show(); a dismiss that wins the race before show() must not crash.
-                if (hidden[0] != null) hidden[0].setVisibility(PlayTorrioDetails.supports(currentArtwork.currentItem())
+                if (hidden[0] != null) hidden[0].setVisibility(PlayTorrioDetails.isInstalled(activity)
+                    && PlayTorrioDetails.supports(currentArtwork.currentItem())
                     ? View.VISIBLE : View.GONE);
                 if (hidden[3] != null) hidden[3].setVisibility(View.INVISIBLE);
                 View hint = activity.findViewById(R.id.artworkHint);

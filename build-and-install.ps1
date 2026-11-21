@@ -42,12 +42,14 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not select the personalized launcher as 
 # is what receives the global SET key before Android Settings does.
 & $adb shell settings put secure enabled_accessibility_services com.gathin.tvhome/com.gathin.tvhome.SourceKeyService
 & $adb shell settings put secure accessibility_enabled 1
+& $adb shell pm grant com.gathin.tvhome android.permission.WRITE_SECURE_SETTINGS
 if ($LASTEXITCODE -ne 0) { throw 'Could not enable the SET key service' }
 & $adb shell pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION
 & $adb shell pm grant com.gathin.tvhome android.permission.ACCESS_COARSE_LOCATION
 & $adb shell pm grant com.gathin.tvhome android.permission.NEARBY_WIFI_DEVICES
 & $adb shell pm disable-user --user 0 $StockLauncher
 if ($LASTEXITCODE -ne 0) { throw 'Could not disable the stock launcher' }
+& $adb shell am start -n com.gathin.tvhome/.MainActivity
 
 # The TMDB read token is not compiled into the APK: it is copied onto the television, where the
 # launcher reads it at startup. Keep it outside the project, in ~\.config\tvhome\tmdb-token.

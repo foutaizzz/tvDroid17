@@ -5,6 +5,7 @@ Set TV_HOST to the TV's IP. Usage:
     tv.py --probe                      connect and print model / Android version
     tv.py <shell command...>           run one shell command
     tv.py --batch < commands.txt       one command per line, same connection
+    tv.py --quiet-batch < commands.txt same without echoing the commands (for secrets)
     tv.py --push <local> <remote>      small files only (see b64push.py for larger ones)
     tv.py --pull <remote> <local>
 """
@@ -59,16 +60,19 @@ def main():
     elif args[0] == "--pull" and len(args) == 3:
         dev.pull(args[1], args[2], transport_timeout_s=300.0, read_timeout_s=300.0)
         print(f"pulled {args[1]} -> {args[2]}")
-    elif args[0] == "--batch":
+    elif args[0] in ("--batch", "--quiet-batch"):
         # one shell command per stdin line, each run separately on the same connection.
         # utf-8-sig drops the BOM Windows PowerShell may prepend to piped stdin.
+        quiet = args[0] == "--quiet-batch"
         sys.stdin.reconfigure(encoding="utf-8-sig")
         for line in sys.stdin:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
             out = dev.shell(line, read_timeout_s=SHELL_TIMEOUT)
-            sys.stdout.write(f"$ {line}\n{out}")
+            if not quiet:
+                sys.stdout.write(f"$ {line}\n")
+            sys.stdout.write(out)
             if out and not out.endswith("\n"):
                 sys.stdout.write("\n")
             sys.stdout.flush()

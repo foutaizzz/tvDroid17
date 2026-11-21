@@ -15,7 +15,7 @@ final class WeatherClockView extends View {
     // Bright LED red for the main clock and weather, with dimmer red for secondary marks.
     static final int RED=0xFFFF0000;
     private static final int DIM_RED=0xFF5C0000;   // rouge sombre des graduations minutes (mesuré: 92,0,0)
-    // Mode test désactivé : données réelles (météo réseau Paris, heure système).
+    // Mode test désactivé : données météo configurées et heure système.
     static final boolean TEST_MODE=false;
     // Géométrie mesurée sur ref-economiseur-écran-*.png (1920x1080, ÷2 = espace 960x540) :
     // cadran centré en (550,539)px, rayon 325px, 12 graduations au bord, bloc météo à droite.
@@ -32,7 +32,8 @@ final class WeatherClockView extends View {
     private Bitmap dialCache;
     private Canvas dialCanvas;
     private String cachedWeatherKey="";
-    WeatherClockView(Context context){super(context);regular=context.getResources().getFont(R.font.clock_400);medium=context.getResources().getFont(R.font.clock_500);setBackgroundColor(Color.BLACK);}
+    private final String city;
+    WeatherClockView(Context context){super(context);regular=context.getResources().getFont(R.font.clock_400);medium=context.getResources().getFont(R.font.clock_500);city=context.getString(R.string.weather_city);setBackgroundColor(Color.BLACK);}
     void setWeather(WeatherData value,boolean loading){weather=value;this.loading=loading;invalidate();}
     @Override protected void onDraw(Canvas canvas){
         super.onDraw(canvas);
@@ -91,9 +92,8 @@ final class WeatherClockView extends View {
             text(dialCanvas,"Ciel plutôt dégagé",521.5f,391,32,medium,RED);
             text(dialCanvas,"↑ 14°  ↓ 6°",522.5f,434,33,regular,RED);
         } else {
-            // Données réelles : météo réseau Paris — mêmes constantes visuelles que la
-            // branche test (mesurées sur la référence Apple).
-            text(dialCanvas,"Paris",520.5f,132,40,medium,RED);
+            // Same fixed layout, with the city supplied by this install's configuration.
+            text(dialCanvas,city,520.5f,132,40,medium,RED);
             text(dialCanvas,weather==null?"—°":Math.round(weather.temperature)+"°",521.5f,272,174,medium,RED);
             if(weather!=null){
                 icon(dialCanvas,526.5f,319,weather);

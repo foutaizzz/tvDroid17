@@ -40,7 +40,7 @@ public class WeatherDreamInstrumentation extends Instrumentation {
             WeatherClient cached=new WeatherClient(getTargetContext());
             if(cached.cached()==null)throw new AssertionError("Offline snapshot unavailable");cached.close();
             try{cached.fetch();throw new AssertionError("Closed client still fetches");}catch(java.io.IOException expected){}
-            result.putString("verification","PASS: French conditions, complete temperatures, invalid/expired payload rejection, black/red 1080p rendering, live HTTPS weather from TV, offline snapshot and closed client; Paris");finish(Activity.RESULT_OK,result);
+            result.putString("verification","PASS: French conditions, complete temperatures, invalid/expired payload rejection, black/red 1080p rendering, live HTTPS weather from TV, offline snapshot and closed client");finish(Activity.RESULT_OK,result);
         }catch(Throwable error){result.putString("failure",android.util.Log.getStackTraceString(error));finish(Activity.RESULT_CANCELED,result);}
     }
 }

@@ -14,8 +14,8 @@ android {
         // targetSdk only changes behaviour on newer devices; on this Android 10 TV it is inert,
         // but keeping it current protects the launcher if it is ever installed on a newer TV.
         targetSdk 34
-        versionCode 2
-        versionName '2.0'
+        versionCode 3
+        versionName '1.0.0'
         // The TMDB read token is not compiled in: it is read from the television at runtime
         // (see TokenStore), so an APK that leaves the device carries no account key.
         testInstrumentationRunner project.findProperty('testRunner') ?: 'com.gathin.tvhome.ArtworkInstrumentation'

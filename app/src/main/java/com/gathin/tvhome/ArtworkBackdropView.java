@@ -3,9 +3,18 @@ package com.gathin.tvhome;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.SystemClock;
+import android.os.Handler;
+import android.os.Looper;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicBlur;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
@@ -14,8 +23,13 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /** Two transient image layers crossfade as a unit, including the top-left logo/title. */
 public class ArtworkBackdropView extends FrameLayout {
+    private static final long ARTWORK_FADE_MS = 600L;
+    private static final long BACKDROP_BLUR_FADE_MS = 300L;
     private final Layer[] layers = new Layer[2];
     private int front = -1;
     private int transition;
@@ -27,6 +41,14 @@ public class ArtworkBackdropView extends FrameLayout {
     private boolean logoPending;
     private boolean controlsVisible;
     private boolean descriptionPending;
+    private boolean backdropBlurred;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private final ExecutorService blurWorker = Executors.newSingleThreadExecutor();
+    private boolean closed;
+    private Layer pendingShowLayer, pendingShowOldLayer;
+    private CinemetaClient.Frame pendingShowFrame;
+    private int pendingShowVersion, pendingShowNext;
+    private boolean pendingShowDescription, pendingShowImmediate;
     private Bitmap testBackground;
     private long frameRevision, contentRevision;
 
@@ -53,27 +75,60 @@ public class ArtworkBackdropView extends FrameLayout {
      *                  the automatic carousel keeps its 600 ms fade.
      */
     void show(CinemetaClient.Frame artwork, boolean descriptionPending, boolean immediate) {
+        clearPendingShow();
         int version = ++transition;
         Layer old = front < 0 ? null : layers[front];
         int next = front == 0 ? 1 : 0;
         Layer incoming = layers[next];
         incoming.clear();
-        incoming.picture.setImageBitmap(testBackground == null ? artwork.background : testBackground);
+        incoming.originalBackground = testBackground == null ? artwork.background : testBackground;
+        incoming.picture.setImageBitmap(incoming.originalBackground);
         incoming.picture.setScaleX(selected ? 1.035f : 1f);
         incoming.picture.setScaleY(selected ? 1.035f : 1f);
+        incoming.blurredPicture.setScaleX(selected ? 1.035f : 1f);
+        incoming.blurredPicture.setScaleY(selected ? 1.035f : 1f);
         incoming.detailsShade.setAlpha(selected ? 1f : 0f);
         if (testBackground != null) {
             incoming.logo.setVisibility(GONE);
             incoming.title.setVisibility(GONE);
         } else if (artwork.logo != null) {
             incoming.logo.setImageBitmap(artwork.logo);
+            incoming.hasLogo = true;
+            incoming.hasTitle = false;
             incoming.logo.setVisibility(VISIBLE);
             incoming.title.setVisibility(GONE);
             sizeLogo(incoming.logo, artwork.logo);
         } else {
             incoming.logo.setVisibility(GONE);
             incoming.title.setText(artwork.title);
+            incoming.hasLogo = false;
+            incoming.hasTitle = !artwork.logoPending;
             incoming.title.setVisibility(artwork.logoPending ? INVISIBLE : VISIBLE);
+        }
+        if (backdropBlurred && incoming.blurredBackground == null) {
+            incoming.applyBrandingVisibility(true);
+            pendingShowLayer = incoming;
+            pendingShowOldLayer = old;
+            pendingShowFrame = artwork;
+            pendingShowVersion = version;
+            pendingShowNext = next;
+            pendingShowDescription = descriptionPending;
+            pendingShowImmediate = immediate;
+            requestBlur(incoming);
+            return;
+        }
+        applyBlurMode(incoming);
+        finishShow(artwork, descriptionPending, immediate, incoming, old, version, next);
+    }
+
+    private void finishShow(CinemetaClient.Frame artwork, boolean descriptionPending, boolean immediate,
+                            Layer incoming, Layer old, int version, int next) {
+        if (version != transition) return;
+        if (backdropBlurred && incoming.blurredBackground != null) {
+            incoming.blurredPicture.setImageBitmap(incoming.blurredBackground);
+            incoming.blurredPicture.setAlpha(1f);
+            incoming.blurredPicture.setVisibility(VISIBLE);
+            incoming.applyBrandingVisibility(true);
         }
         if (old != null) {
             old.animate().cancel();
@@ -89,7 +144,7 @@ public class ArtworkBackdropView extends FrameLayout {
         } else {
             incoming.setAlpha(0f);
             // Keep the old layer under the new one during the automatic crossfade.
-            incoming.animate().alpha(1f).withLayer().setDuration(old == null ? 180 : 600)
+            incoming.animate().alpha(1f).withLayer().setDuration(old == null ? 180 : ARTWORK_FADE_MS)
                     .setInterpolator(new DecelerateInterpolator(1.3f))
                     .setUpdateListener(animation -> notifyVisualChangedThrottled())
                     .withEndAction(() -> {
@@ -107,6 +162,24 @@ public class ArtworkBackdropView extends FrameLayout {
         notifyVisualChanged();
     }
 
+    private void clearPendingShow() {
+        pendingShowLayer = null;
+        pendingShowOldLayer = null;
+        pendingShowFrame = null;
+    }
+
+    private void finishPendingShow(boolean useBlur) {
+        Layer incoming = pendingShowLayer;
+        if (incoming == null) return;
+        Layer old = pendingShowOldLayer;
+        CinemetaClient.Frame artwork = pendingShowFrame;
+        int version = pendingShowVersion, next = pendingShowNext;
+        boolean description = pendingShowDescription, immediate = pendingShowImmediate;
+        clearPendingShow();
+        if (!useBlur) applyBlurMode(incoming);
+        finishShow(artwork, description, immediate, incoming, old, version, next);
+    }
+
     ArtworkPolicy.Item currentItem() { return item; }
 
     void setTestBackground(Bitmap bitmap) {
@@ -114,9 +187,12 @@ public class ArtworkBackdropView extends FrameLayout {
         testBackground = bitmap;
         if (front >= 0) {
             Layer current = layers[front];
+            current.originalBackground = bitmap;
             current.picture.setImageBitmap(bitmap);
             current.logo.setVisibility(GONE);
             current.title.setVisibility(GONE);
+            current.hasLogo = current.hasTitle = false;
+            applyBlurMode(current);
             contentRevision++;
             notifyVisualChanged();
         }
@@ -213,12 +289,13 @@ public class ArtworkBackdropView extends FrameLayout {
         if (logo != null) {
             sizeLogo(layer.logo, logo);
             layer.logo.setImageBitmap(logo);
-            layer.logo.setVisibility(VISIBLE);
-            layer.title.setVisibility(GONE);
+            layer.hasLogo = true;
+            layer.hasTitle = false;
         } else {
-            layer.logo.setVisibility(GONE);
-            layer.title.setVisibility(VISIBLE);
+            layer.hasLogo = false;
+            layer.hasTitle = true;
         }
+        layer.applyBrandingVisibility(backdropBlurred);
         if (changed != null) changed.run();
         notifyVisualChanged();
     }
@@ -283,7 +360,112 @@ public class ArtworkBackdropView extends FrameLayout {
                         }
                     })
                     .setInterpolator(new DecelerateInterpolator()).start();
+            layer.blurredPicture.animate().cancel();
+            layer.blurredPicture.animate().scaleX(selected ? 1.035f : 1f)
+                    .scaleY(selected ? 1.035f : 1f).setDuration(220)
+                    .setInterpolator(new DecelerateInterpolator()).start();
         }
+    }
+
+    /** Blur only the backdrop while browsing app tiles; the logo and title are hidden. */
+    void setBackdropBlurred(boolean blurred) {
+        if (backdropBlurred == blurred) return;
+        backdropBlurred = blurred;
+        for (Layer layer : layers) {
+            if (layer.getVisibility() == VISIBLE && layer.originalBackground != null)
+                applyBlurMode(layer);
+        }
+        if (!blurred && pendingShowLayer != null) finishPendingShow(false);
+        contentRevision++;
+        notifyVisualChanged();
+    }
+
+    private void applyBlurMode(Layer layer) {
+        if (!backdropBlurred) {
+            layer.picture.setImageBitmap(layer.originalBackground);
+            layer.applyBrandingVisibility(false);
+            layer.fadeBlurTo(false);
+            return;
+        }
+        layer.applyBrandingVisibility(true);
+        if (layer.blurredBackground != null) layer.fadeBlurTo(true);
+        else requestBlur(layer);
+    }
+
+    private void requestBlur(Layer layer) {
+        if (closed || layer.originalBackground == null || layer.blurring) return;
+        layer.blurring = true;
+        Bitmap source = layer.originalBackground;
+        long version = ++layer.blurVersion;
+        try {
+            blurWorker.execute(() -> {
+                Bitmap result = null;
+                try { result = blurBackdrop(source); }
+                catch (RuntimeException unsupported) {
+                    android.util.Log.w("TvHomeArtwork", "Backdrop blur unavailable", unsupported);
+                }
+                Bitmap blurred = result;
+                main.post(() -> {
+                    if (closed || version != layer.blurVersion || layer.originalBackground != source) {
+                        if (blurred != null && !blurred.isRecycled()) blurred.recycle();
+                        return;
+                    }
+                    layer.blurring = false;
+                    if (blurred != null) {
+                        layer.blurredBackground = blurred;
+                        if (pendingShowLayer == layer && backdropBlurred) {
+                            finishPendingShow(true);
+                        } else if (backdropBlurred && layer.getVisibility() == VISIBLE) {
+                            layer.fadeBlurTo(true);
+                        }
+                    } else if (pendingShowLayer == layer) {
+                        // Keep the previous slide (or black at startup) instead of exposing a
+                        // sharp frame while the requested blur could not be produced.
+                        clearPendingShow();
+                    }
+                    contentRevision++;
+                    notifyVisualChanged();
+                });
+            });
+        } catch (java.util.concurrent.RejectedExecutionException closed) {
+            layer.blurring = false;
+        }
+    }
+
+    private Bitmap blurBackdrop(Bitmap source) {
+        int width = Math.min(320, source.getWidth());
+        int height = Math.max(1, Math.round(width * source.getHeight() / (float) source.getWidth()));
+        Bitmap small = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(small);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        canvas.drawBitmap(source, null, new Rect(0, 0, width, height), paint);
+        RenderScript rs = null;
+        Allocation input = null, output = null;
+        ScriptIntrinsicBlur blur = null;
+        try {
+            rs = RenderScript.create(getContext().getApplicationContext());
+            input = Allocation.createFromBitmap(rs, small);
+            output = Allocation.createTyped(rs, input.getType());
+            blur = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs));
+            blur.setRadius(25f);
+            blur.setInput(input);
+            blur.forEach(output);
+            output.copyTo(small);
+            return small;
+        } catch (RuntimeException unsupported) {
+            small.recycle();
+            throw unsupported;
+        } finally {
+            if (blur != null) blur.destroy();
+            if (input != null) input.destroy();
+            if (output != null) output.destroy();
+            if (rs != null) rs.destroy();
+        }
+    }
+
+    void close() {
+        closed = true;
+        blurWorker.shutdownNow();
     }
 
     void clear() {
@@ -298,7 +480,7 @@ public class ArtworkBackdropView extends FrameLayout {
     }
 
     private final class Layer extends FrameLayout {
-        final ImageView picture, logo;
+        final ImageView picture, blurredPicture, logo;
         final TextView title;
         final View detailsShade;
         TrailerWebView trailer;
@@ -308,6 +490,12 @@ public class ArtworkBackdropView extends FrameLayout {
             picture = new ImageView(context);
             picture.setScaleType(ImageView.ScaleType.CENTER_CROP);
             addView(picture, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+            blurredPicture = new ImageView(context);
+            blurredPicture.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            blurredPicture.setAlpha(0f);
+            blurredPicture.setVisibility(GONE);
+            addView(blurredPicture, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
             View bottomShade = new View(context);
             bottomShade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
@@ -358,8 +546,14 @@ public class ArtworkBackdropView extends FrameLayout {
         }
 
         void clear() {
+            blurVersion++;
+            blurring = false;
+            originalBackground = null;
+            blurredBackground = null;
+            hasLogo = hasTitle = false;
             animate().cancel();
             picture.animate().cancel();
+            blurredPicture.animate().cancel();
             detailsShade.animate().cancel();
             logo.animate().cancel();
             title.animate().cancel();
@@ -369,11 +563,46 @@ public class ArtworkBackdropView extends FrameLayout {
             title.setAlpha(1f);
             picture.setScaleX(1f);
             picture.setScaleY(1f);
+            blurredPicture.setScaleX(1f);
+            blurredPicture.setScaleY(1f);
+            blurredPicture.setAlpha(0f);
+            blurredPicture.setVisibility(GONE);
             setVisibility(GONE);
             setAlpha(0f);
             picture.setImageDrawable(null);
+            blurredPicture.setImageDrawable(null);
             logo.setImageDrawable(null);
             title.setText(null);
+        }
+
+        Bitmap originalBackground, blurredBackground;
+        long blurVersion;
+        boolean blurring, hasLogo, hasTitle;
+
+        void applyBrandingVisibility(boolean hidden) {
+            logo.setVisibility(!hidden && hasLogo ? VISIBLE : GONE);
+            title.setVisibility(!hidden && hasTitle ? VISIBLE : GONE);
+        }
+
+        void fadeBlurTo(boolean blurred) {
+            blurredPicture.animate().cancel();
+            if (blurred) {
+                if (blurredBackground == null) return;
+                blurredPicture.setImageBitmap(blurredBackground);
+                blurredPicture.setVisibility(VISIBLE);
+                blurredPicture.animate().alpha(1f).withLayer().setDuration(BACKDROP_BLUR_FADE_MS)
+                        .setInterpolator(new DecelerateInterpolator(1.3f))
+                        .setUpdateListener(animation -> notifyVisualChangedThrottled())
+                        .withEndAction(ArtworkBackdropView.this::notifyVisualChanged).start();
+            } else if (blurredPicture.getVisibility() == VISIBLE) {
+                blurredPicture.animate().alpha(0f).withLayer().setDuration(BACKDROP_BLUR_FADE_MS)
+                        .setInterpolator(new DecelerateInterpolator(1.3f))
+                        .setUpdateListener(animation -> notifyVisualChangedThrottled())
+                        .withEndAction(() -> {
+                            if (!backdropBlurred) blurredPicture.setVisibility(GONE);
+                            notifyVisualChanged();
+                        }).start();
+            }
         }
 
         void removeTrailer() {

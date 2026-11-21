@@ -46,8 +46,8 @@ final class ArtworkPolicy {
         return "https://images.metahub.space/poster/medium/" + item.id + "/img";
     }
 
-    static boolean canAutoAdvance(boolean held, boolean manualNavigation) {
-        return !held || manualNavigation;
+    static boolean canAutoAdvance(boolean held) {
+        return !held;
     }
 
     static List<Item> mix(List<Item> movies, List<Item> series) {

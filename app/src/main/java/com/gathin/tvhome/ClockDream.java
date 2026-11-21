@@ -6,7 +6,7 @@ import android.service.dreams.DreamService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Red analog clock on black, with public weather for the fixed city of Paris. */
+/** Red analog clock on black, with public weather for the configured city. */
 public class ClockDream extends DreamService {
     // The dial behind the hands is a cached bitmap, so only the hands are redrawn; 25 fps gives
     // a 0.24° step for the second hand — smooth to the eye — while keeping the CPU load low.
@@ -33,15 +33,11 @@ public class ClockDream extends DreamService {
         black.setBackgroundColor(android.graphics.Color.BLACK);
         content=new WeatherClockView(this);
         black.addView(content,new android.widget.FrameLayout.LayoutParams(-1,-1));
-        // Voile noir pur à 50 % d'opacité au premier plan : assombrit l'économiseur sans toucher
-        // à la luminosité système (0x80 = 128/255 ≈ 50 %).
-        android.view.View veil=new android.view.View(this);
-        veil.setBackgroundColor(0x80000000);
-        black.addView(veil,new android.widget.FrameLayout.LayoutParams(-1,-1));
         setContentView(black);
     }
     @Override public void onDreamingStarted(){
         super.onDreamingStarted();dreaming=true;generation++;
+        ScreensaverBacklight.dim(this);
         content.setAlpha(0);content.animate().alpha(1).setDuration(900).start();
         client=new WeatherClient(this);worker=Executors.newSingleThreadExecutor();
         clockTick.run();refreshWeather();
@@ -71,6 +67,7 @@ public class ClockDream extends DreamService {
     @Override public void onDetachedFromWindow(){stop();super.onDetachedFromWindow();}
     private void stop(){
         dreaming=false;generation++;handler.removeCallbacksAndMessages(null);
+        ScreensaverBacklight.restore(this);
         if(content!=null)content.animate().cancel();
         if(client!=null){client.close();client=null;}
         if(worker!=null){worker.shutdownNow();worker=null;}

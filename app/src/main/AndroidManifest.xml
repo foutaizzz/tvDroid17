@@ -11,6 +11,8 @@
     <!-- Public Cinemeta metadata/artwork only; no downloads are saved. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Granted over ADB; used only to lower and restore the TV's MediaTek backlight setting. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <!-- Wi-Fi network name: location on Android <= 12, NEARBY_WIFI_DEVICES on Android 13+.
          Both are granted over adb at install time. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
@@ -22,6 +24,7 @@
 
     <!-- Package visibility (Android 11+): as a HOME app we list the other launchable apps. -->
     <queries>
+        <package android:name="com.playtorrio.tv" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

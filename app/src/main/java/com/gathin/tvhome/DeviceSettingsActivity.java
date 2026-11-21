@@ -149,8 +149,9 @@ public class DeviceSettingsActivity extends Activity {
                 row("Capacité totale",android.text.format.Formatter.formatFileSize(this,disk.getTotalSpace()),"Capacité de la partition de données Android.",R.drawable.ic_apps,null);
                 row("Gérer le stockage",null,"Consultez les applications et les supports de stockage.",R.drawable.ic_apps,()->nativePage(".device.StorageResetActivity")); return;
             case "dream":
-                row("Apparence","Cadran rouge sur fond noir","Une horloge à aiguilles et la météo d’Paris : température, conditions et minimum/maximum du jour.",R.drawable.ic_timer,null);
-                row("Météo","Paris","Données : Open-Meteo (https://open-meteo.com), licence CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Conditions traduites en français. Actualisation toutes les vingt minutes. La ville est fixe, sans géolocalisation par IP.",R.drawable.ic_wifi,null);
+                String city=getString(R.string.weather_city);
+                row("Apparence","Cadran rouge sur fond noir","Une horloge à aiguilles et la météo de "+city+" : température, conditions et minimum/maximum du jour.",R.drawable.ic_timer,null);
+                row("Météo",city,"Données : Open-Meteo (https://open-meteo.com), licence CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Conditions traduites en français. Actualisation toutes les vingt minutes. La ville est configurée localement, sans géolocalisation par IP.",R.drawable.ic_wifi,null);
                 row("Délai et activation",null,"Réglez le démarrage de l’économiseur d’écran.",R.drawable.ic_timer,()->nativePage(".device.display.daydream.DaydreamActivity")); return;
             case "captions":
                 CaptioningManager manager=getSystemService(CaptioningManager.class);
