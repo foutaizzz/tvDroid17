@@ -10,59 +10,38 @@ import android.graphics.Typeface;
 import android.view.View;
 import java.util.Calendar;
 
-/** Vector clock/weather composition inspired by the supplied red StandBy reference. */
+/** Vector clock and weather composition for the screensaver. */
 final class WeatherClockView extends View {
     // Bright LED red for the main clock and weather, with dimmer red for secondary marks.
     static final int RED=0xFFFF0000;
     private static final int DIM_RED=0xFF5C0000;   // rouge sombre des graduations minutes (mesuré: 92,0,0)
-    // Mode test désactivé : données météo configurées et heure système.
-    static final boolean TEST_MODE=false;
-    // Géométrie mesurée sur ref-economiseur-écran-*.png (1920x1080, ÷2 = espace 960x540) :
-    // cadran centré en (550,539)px, rayon 325px, 12 graduations au bord, bloc météo à droite.
+    // Geometry tuned for a 16:9 television canvas at 960 x 540 logical pixels.
     private static final float CX=275f, CY=269f, DIAL_R=163f;
     private static final int SECOND_HAND_RED=0xFFB20004;
-    private static final String[] WEEKDAYS={"","DIM","LUN","MAR","MER","JEU","VEN","SAM"};
-    private static final String[] MONTHS={"JAN","FÉV","MAR","AVR","MAI","JUIN","JUIL","AOÛ","SEP","OCT","NOV","DÉC"};
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Typeface regular,medium;
+    private final Typeface medium,bold;
     private WeatherData weather;
     private boolean loading=true;
-    private int dialDay=-1,dialYear=-1;
-    private String dialDate="",dialYearText="";
     private Bitmap dialCache;
     private Canvas dialCanvas;
     private String cachedWeatherKey="";
     private final String city;
-    WeatherClockView(Context context){super(context);regular=context.getResources().getFont(R.font.clock_400);medium=context.getResources().getFont(R.font.clock_500);city=context.getString(R.string.weather_city);setBackgroundColor(Color.BLACK);}
+    WeatherClockView(Context context){super(context);medium=context.getResources().getFont(R.font.clock_500);bold=Typeface.create(medium,Typeface.BOLD);city=context.getString(R.string.weather_city);setBackgroundColor(Color.BLACK);}
     void setWeather(WeatherData value,boolean loading){weather=value;this.loading=loading;invalidate();}
     @Override protected void onDraw(Canvas canvas){
         super.onDraw(canvas);
         float scale=Math.min(getWidth()/960f,getHeight()/540f);
         if(scale<=0)return;
         canvas.save();canvas.translate((getWidth()-960*scale)/2,(getHeight()-540*scale)/2);canvas.scale(scale,scale);
-        // The composition is fixed: the reference is a still image, and a moving layout would
-        // never line up with it.
+        // Keep the composition fixed inside the canvas, scaling it uniformly to the screen.
         renderDial();
         canvas.drawBitmap(dialCache,0,0,null);
         // Only the hands move every frame; the dial behind them is a cached bitmap.
-        float seconds, minutes, hours;
-        if (TEST_MODE) {
-            // Heure factice 04:05:41 pour la comparaison avec la référence.
-            seconds=41f; minutes=5f+41f/60f; hours=4f+minutes/60f;
-        } else {
-            Calendar now=Calendar.getInstance();
-            seconds=now.get(Calendar.SECOND)+now.get(Calendar.MILLISECOND)/1000f;
-            minutes=now.get(Calendar.MINUTE)+seconds/60f; hours=now.get(Calendar.HOUR)+minutes/60f;
-        }
-        // Aiguilles mesurées sur ref-economiseur-écran-aiguilles-seules.png (meme instant 04:05:41,
-        // centre 550,539 px, 2 px par unite) :
-        //  - pointe des heures   201 px (100,5 u), des minutes 338 px (169 u), des secondes 327 px (163,5 u)
-        //  - tige fine de 13 px (6,5 u) jusqu'a 42 px (21 u), puis evasement conique de 16 px (8 u)
-        //    vers le corps plein de 25 px (12,5 u), termine par un bout arrondi.
-        //  - pointe de l'aiguille des secondes 327 px, avec une queue de 56 px (28 u) derriere le moyeu.
-        // Moyeu, trace en premier pour rester derriere les aiguilles : cercle rouge vif de 10 u,
-        // puis (apres les aiguilles) le disque rouge sombre de 6,5 u auquel l'aiguille des secondes
-        // se raccorde, perce d'un trou noir de 3,25 u.
+        Calendar now=Calendar.getInstance();
+        float seconds=now.get(Calendar.SECOND)+now.get(Calendar.MILLISECOND)/1000f;
+        float minutes=now.get(Calendar.MINUTE)+seconds/60f;
+        float hours=now.get(Calendar.HOUR)+minutes/60f;
+        // The shared center is painted first; the red hands then sit on top of the black dial.
         paint.setStyle(Paint.Style.FILL);paint.setColor(RED);canvas.drawCircle(CX,CY,10f,paint);
         mainHand(canvas,CX,CY,hours*30,100.5f,21f,6f,6.5f,12.5f);
         mainHand(canvas,CX,CY,minutes*6,169f,21f,6f,6.5f,12.5f);
@@ -71,40 +50,26 @@ final class WeatherClockView extends View {
         paint.setColor(Color.BLACK);canvas.drawCircle(CX,CY,3.25f,paint);
         canvas.restore();
     }
-    /** Dial, city and weather change only with the date or the weather: render them once. */
+    /** The dial and weather labels are cached and redrawn only when weather changes. */
     private void renderDial(){
-        Calendar now=Calendar.getInstance();
-        int dayOfYear=now.get(Calendar.DAY_OF_YEAR),year=now.get(Calendar.YEAR);
         String weatherKey=(weather==null?"-":weather.code+"|"+weather.temperature+"|"+weather.condition()+"|"+weather.high+"|"+weather.low+"|"+weather.day)+"|"+loading;
         if(dialCache==null){dialCache=Bitmap.createBitmap(960,540,Bitmap.Config.ARGB_8888);dialCanvas=new Canvas(dialCache);}
-        if(dayOfYear==dialDay&&year==dialYear&&weatherKey.equals(cachedWeatherKey))return;
-        dialDay=dayOfYear;dialYear=year;cachedWeatherKey=weatherKey;
-        dialDate=WEEKDAYS[now.get(Calendar.DAY_OF_WEEK)]+" "+now.get(Calendar.DAY_OF_MONTH);
-        dialYearText=MONTHS[now.get(Calendar.MONTH)];
+        if(weatherKey.equals(cachedWeatherKey))return;
+        cachedWeatherKey=weatherKey;
         dialCanvas.drawColor(Color.BLACK);
         dial(CX,CY,DIAL_R);
-        if (TEST_MODE) {
-            // Données factices (référence) : Paris, 7°, "Ciel plutôt dégagé", 14°/6°, simple croissant de lune.
-            WeatherData fake=new WeatherData(7,14,6,0,false,"2026-11-05",System.currentTimeMillis());
-            text(dialCanvas,"Paris",520.5f,132,40,medium,RED);
-            text(dialCanvas,"7°",521.5f,272,174,medium,RED);
-            icon(dialCanvas,526.5f,319,fake);
-            text(dialCanvas,"Ciel plutôt dégagé",521.5f,391,32,medium,RED);
-            text(dialCanvas,"↑ 14°  ↓ 6°",522.5f,434,33,regular,RED);
-        } else {
-            // Same fixed layout, with the city supplied by this install's configuration.
-            text(dialCanvas,city,520.5f,132,40,medium,RED);
-            text(dialCanvas,weather==null?"—°":Math.round(weather.temperature)+"°",521.5f,272,174,medium,RED);
-            if(weather!=null){
-                icon(dialCanvas,526.5f,319,weather);
-                text(dialCanvas,weather.condition(),521.5f,391,32,medium,RED);
-                text(dialCanvas,"↑ "+Math.round(weather.high)+"°  ↓ "+Math.round(weather.low)+"°",522.5f,434,33,regular,RED);
-            }else text(dialCanvas,loading?"Actualisation…":"Météo indisponible",521.5f,391,32,medium,RED);
-        }
+        // Same fixed layout, with the city supplied by this install's configuration.
+        text(dialCanvas,city,520.5f,132,40,bold,RED);
+        text(dialCanvas,weather==null?"—°":Math.round(weather.temperature)+"°",521.5f,272,174,medium,RED);
+        if(weather!=null){
+            icon(dialCanvas,526.5f,319,weather);
+            text(dialCanvas,weather.condition(),521.5f,391,32,bold,RED);
+            text(dialCanvas,"↑ "+Math.round(weather.high)+"°  ↓ "+Math.round(weather.low)+"°",522.5f,434,33,bold,RED);
+        }else text(dialCanvas,loading?"Actualisation…":"Météo indisponible",521.5f,391,32,bold,RED);
     }
     private void dial(float x,float y,float radius){
-        // Mesuré sur la référence : bord en superellipse (n=6). Graduations d'heures (toutes
-        // les 30°) : du rayon fixe intérieur 129 jusqu'au bord, épaisseur 3,5, rouge vif.
+        // The superellipse border keeps the hour and minute marks inside the clock face.
+        // Hour marks (every 30 degrees) run from radius 129 to the edge, in bright red.
         // Graduations de minutes (toutes les 6°) : 18 unités avant le bord, épaisseur 3, rouge sombre.
         for(int i=0;i<60;i++){
             boolean hour=i%5==0;
@@ -113,19 +78,14 @@ final class WeatherClockView extends View {
             float inner=hour?129f:outer-18f;
             line(dialCanvas,x+(float)Math.cos(angle)*inner,y+(float)Math.sin(angle)*inner,x+(float)Math.cos(angle)*outer,y+(float)Math.sin(angle)*outer,hour?3.5f:3f, hour?RED:DIM_RED);
         }
-        // Chiffres 12/3/6/9 : mesurés dans la référence (rouge vif, hauteur 72 px, centres à
-        // 102 u pour 3, 97 u pour 6, 101 u pour 9 et 97 u pour 12).
+        // The 12, 3, 6, and 9 stay balanced within the clock face.
         centerText(dialCanvas,"12",x,y-radius*.596f,51);
         centerText(dialCanvas,"3",x+radius*.626f,y,51);
         centerText(dialCanvas,"6",x,y+radius*.596f,51);
         centerText(dialCanvas,"9",x-radius*.622f,y,51);
-        /* Date et mois retirés du cadran à la demande — code conservé en commentaire :
-        centerText(dialCanvas,dialDate,x,y-radius*.33f,20);
-        centerText(dialCanvas,dialYearText,x,y+radius*.33f,20);
-        */
     }
     private static float roundedSquareRadius(float halfSide,double angle){
-        // Superellipse n=10 : ajusté sur la référence (demi-côté 163 unités, rayon 326 px aux
+        // Superellipse n=10 : demi-côté 163 unités, rayon 326 px aux
         // axes, 402 px à 36°). n=10 donne des bords nettement moins arrondis qu'un n=6.
         double dx=Math.abs(Math.cos(angle)),dy=Math.abs(Math.sin(angle));
         return (float)(halfSide/Math.pow(Math.pow(dx,10)+Math.pow(dy,10),1d/10));

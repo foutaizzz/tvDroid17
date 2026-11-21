@@ -53,6 +53,8 @@ equirements.txt
 
 Au premier déploiement, acceptez l’autorisation de débogage sur l’écran de la TV et cochez « Toujours autoriser ». Le script compile l’APK, l’installe, accorde les droits nécessaires, active SET/INPUT et choisit tvDroid 17 comme accueil. Il désactive également le launcher Google indiqué par `STOCK_LAUNCHER` (par défaut `com.google.android.tvlauncher`) ; cette étape est propre à la configuration Xiaomi de référence et réversible. N’utilisez pas ce script sans vérifier le nom du launcher d’origine sur un autre modèle.
 
+La clé ADB propre à votre ordinateur est conservée dans `~/.config/tvhome/adbkey/`, hors du dépôt. Le répertoire peut être déplacé avec la variable `TV_ADB_KEY_DIR`.
+
 Le jeton TMDB est facultatif. Placez-le sur votre ordinateur dans `~/.config/tvhome/tmdb-token` (une ligne), ou définissez `TMDB_TOKEN_FILE`. Sans jeton, le launcher fonctionne mais les fonctions TMDB associées restent indisponibles.
 
 ## Personnaliser pour sa TV

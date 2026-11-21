@@ -23,7 +23,7 @@ PORT = int(os.environ.get("TV_PORT", "5555"))
 SHELL_TIMEOUT = float(os.environ.get("TV_SHELL_TIMEOUT", "120"))
 # The TV address is checked in connect(), not at import time: this module is imported by
 # b64push.py, and exiting here would kill the caller instead of reporting a usable error.
-KEYDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "adbkey")
+KEYDIR = os.path.expanduser(os.environ.get("TV_ADB_KEY_DIR", "~/.config/tvhome/adbkey"))
 KEY = os.path.join(KEYDIR, "adbkey")
 
 
