@@ -28,3 +28,8 @@ tools/venv/
 *.keystore
 *.pem
 *.key
+
+# ===== Local a la racine (non publies) =====
+.claude/
+.vscode/
+screenshots/
