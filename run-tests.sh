@@ -36,13 +36,13 @@ export ANDROID_HOME ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
 
 APK=app/build/outputs/apk/debug/app-debug.apk
 TESTAPK=app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-"$PY" -I tools/b64push.py "$APK" /data/local/tmp/tvhome.apk
-"$PY" -I tools/b64push.py "$TESTAPK" /data/local/tmp/tvhome-test.apk
+"$PY" -I tools/b64push.py "$APK" /data/local/tmp/tvdroid17.apk
+"$PY" -I tools/b64push.py "$TESTAPK" /data/local/tmp/tvdroid17-test.apk
 
 printf '%s\n' \
-  "pm install -r /data/local/tmp/tvhome.apk" \
-  "pm install -r /data/local/tmp/tvhome-test.apk" \
-  "rm -f /data/local/tmp/tvhome.apk /data/local/tmp/tvhome-test.apk" \
+  "pm install -r /data/local/tmp/tvdroid17.apk" \
+  "pm install -r /data/local/tmp/tvdroid17-test.apk" \
+  "rm -f /data/local/tmp/tvdroid17.apk /data/local/tmp/tvdroid17-test.apk" \
   "pm grant com.tvdroid17 android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.NEARBY_WIFI_DEVICES 2>/dev/null" \
   "pm grant com.tvdroid17.test android.permission.INJECT_EVENTS 2>/dev/null; echo test-perms-granted" \
   | "$PY" -I tools/tv.py --batch > /dev/null 2>&1 || true

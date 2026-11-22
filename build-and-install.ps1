@@ -52,8 +52,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not disable the stock launcher' }
 & $adb shell am start -n com.tvdroid17/.MainActivity
 
 # The TMDB read token is not compiled into the APK: it is copied onto the television, where the
-# launcher reads it at startup. Keep it outside the project, in ~\.config\tvhome\tmdb-token.
-$tokenFile = if ($env:TMDB_TOKEN_FILE) { $env:TMDB_TOKEN_FILE } else { Join-Path $HOME '.config\tvhome\tmdb-token' }
+# launcher reads it at startup. Keep it outside the project, in ~\.config\tvdroid17\tmdb-token.
+# The legacy ~\.config\tvhome\tmdb-token is still read when the new one is absent.
+$tokenFile = if ($env:TMDB_TOKEN_FILE) { $env:TMDB_TOKEN_FILE } else { Join-Path $HOME '.config\tvdroid17\tmdb-token' }
+if (-not (Test-Path $tokenFile)) {
+    $legacy = Join-Path $HOME '.config\tvhome\tmdb-token'
+    if (Test-Path $legacy) { $tokenFile = $legacy }
+}
 $token = ''
 if (Test-Path $tokenFile) { $token = (Get-Content $tokenFile -Raw).Trim() }
 if (-not $token) { $token = $env:TMDB_READ_ACCESS_TOKEN }

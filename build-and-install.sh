@@ -28,11 +28,13 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties
 . tools/pyenv.sh
 export MSYS_NO_PATHCONV=1
 APK=app/build/outputs/apk/debug/app-debug.apk
-"$PY" -I tools/b64push.py "$APK" /data/local/tmp/tvhome.apk
+"$PY" -I tools/b64push.py "$APK" /data/local/tmp/tvdroid17.apk
 
 # The TMDB read token is not compiled into the APK: it is copied onto the television, where the
-# launcher reads it at startup. Keep it outside the project, in ~/.config/tvhome/tmdb-token.
-TOKEN_FILE="${TMDB_TOKEN_FILE:-$HOME/.config/tvhome/tmdb-token}"
+# launcher reads it at startup. Keep it outside the project, in ~/.config/tvdroid17/tmdb-token.
+# The legacy ~/.config/tvhome/tmdb-token is still read when the new one is absent.
+TOKEN_FILE="${TMDB_TOKEN_FILE:-$HOME/.config/tvdroid17/tmdb-token}"
+[ -f "$TOKEN_FILE" ] || [ ! -f "$HOME/.config/tvhome/tmdb-token" ] || TOKEN_FILE="$HOME/.config/tvhome/tmdb-token"
 TOKEN=""
 if [ -f "$TOKEN_FILE" ]; then
   TOKEN="$(tr -d '\r\n' < "$TOKEN_FILE")"
@@ -46,8 +48,8 @@ if [ -z "$TOKEN" ]; then
 fi
 
 printf '%s\n' \
-  "pm install -r /data/local/tmp/tvhome.apk" \
-  "rm -f /data/local/tmp/tvhome.apk" \
+  "pm install -r /data/local/tmp/tvdroid17.apk" \
+  "rm -f /data/local/tmp/tvdroid17.apk" \
   "pm grant com.tvdroid17 android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.NEARBY_WIFI_DEVICES 2>/dev/null; echo wifi-granted" \
   "pm grant com.tvdroid17 android.permission.WRITE_SECURE_SETTINGS 2>/dev/null; echo picture-settings-granted" \
   "settings put secure enabled_accessibility_services com.tvdroid17/com.tvdroid17.SourceKeyService" \
