@@ -17,3 +17,13 @@ and put them in a new `debloat/<your-tv>/debloat.txt`. Apply with:
 ```bash
 TV_HOST=<tv ip> tools/disable.sh debloat/<your-tv>/debloat.txt
 ```
+
+## ⚠️ Ne jamais toucher à `com.mediatek.wwtv.tvcenter` (LiveTV / TvCenter)
+
+C'est la **seule** app du firmware qui gère l'intent passthrough
+(`ACTION_VIEW` + type `vnd.android.cursor.item/channel`). Si elle est désactivée
+**ou désinstallée**, chaque entrée HDMI affiche « Non disponible sur cette TV » —
+dans tvDroid 17 comme dans le launcher stock. Elle reste donc active mais est cachée
+de la grille d'apps via `hidden_apps` dans `config.xml`.
+
+Si elle a été désinstallée par erreur : `pm install-existing --user 0 com.mediatek.wwtv.tvcenter`
