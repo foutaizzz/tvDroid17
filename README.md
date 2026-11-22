@@ -21,7 +21,7 @@ Les APK publiés seront attachés aux versions GitHub dans **Releases**. Sur la 
 
 ```sh
 adb connect ADRESSE_IP_DE_LA_TV:5555
-adb install -r tvDroid-17-v1.0.0.apk
+adb install -r tvDroid17-v1.0.0.apk
 adb shell cmd package set-home-activity --user 0 com.tvdroid17/.MainActivity
 ```
 
@@ -32,8 +32,8 @@ adb shell cmd package set-home-activity --user 0 com.tvdroid17/.MainActivity
 Prérequis : [JDK 17+](https://adoptium.net/), [Android Studio / Android SDK](https://developer.android.com/studio), Android Platform Tools, Python 3 et ADB autorisé par la TV. Clonez le dépôt GitHub, puis ouvrez un terminal à sa racine :
 
 ```sh
-git clone URL_DU_DEPOT
-cd tvDroid-17
+git clone https://github.com/foutaizzz/tvDroid17.git
+cd tvDroid17
 ```
 
 ```sh
