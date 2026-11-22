@@ -4,7 +4,7 @@ Read this file and `README.md` before changing tvDroid 17.
 
 ## Product and compatibility
 
-- This repository is an Android TV launcher, namespace/application ID `com.gathin.tvhome`.
+- This repository is an Android TV launcher, namespace/application ID `com.tvdroid17`.
 - Preserve the installed app ID. Changing it would install a second app and lose upgrade compatibility.
 - The tested reference is a Xiaomi Mi TV / Android TV 10 firmware. SET and INPUT remote handling and the `picture_backlight` screensaver integration depend on Xiaomi firmware and must not be advertised as universal.
 - The screensaver is `ClockDream`, with a black background, a red analog clock, configurable Open-Meteo weather, and `ScreensaverBacklight` to set the Xiaomi picture backlight to 1 and restore its prior value.

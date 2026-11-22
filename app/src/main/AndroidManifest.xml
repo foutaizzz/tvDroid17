@@ -66,7 +66,7 @@
             android:screenOrientation="landscape" />
         <activity android:name=".RemoteControlsActivity" android:exported="false"
             android:theme="@style/Theme.TvHome.ControlsOverlay" android:excludeFromRecents="true"
-            android:taskAffinity="com.gathin.tvhome.controls"
+            android:taskAffinity="com.tvdroid17.controls"
             android:launchMode="singleTop" android:screenOrientation="landscape" />
         <service
             android:name=".SourceKeyService"
@@ -81,7 +81,7 @@
         </service>
 
         <!-- Screensaver: pick it in Settings, or `settings put secure screensaver_components
-             com.gathin.tvhome/.ClockDream` over adb. -->
+             com.tvdroid17/.ClockDream` over adb. -->
         <service
             android:name=".ClockDream"
             android:label="@string/dream_name"

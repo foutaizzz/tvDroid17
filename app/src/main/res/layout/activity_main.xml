@@ -2,7 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root" android:layout_width="match_parent"
     android:layout_height="match_parent" android:background="#FF000000">
-    <com.gathin.tvhome.ArtworkBackdropView android:id="@+id/artwork"
+    <com.tvdroid17.ArtworkBackdropView android:id="@+id/artwork"
         android:layout_width="match_parent" android:layout_height="match_parent" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
         android:clipChildren="false" android:clipToPadding="false"
@@ -64,14 +64,14 @@
             android:layout_height="wrap_content" android:textSize="12sp" android:textColor="#EDFFFFFF"
             android:fontFamily="sans-serif-medium" android:includeFontPadding="false"
             android:maxLines="2" android:ellipsize="end" android:lineSpacingExtra="2dp" />
-        <com.gathin.tvhome.SummaryScrollView android:id="@+id/summaryScroll"
+        <com.tvdroid17.SummaryScrollView android:id="@+id/summaryScroll"
             android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
             android:scrollbars="vertical" android:overScrollMode="never" android:fadeScrollbars="false">
         <TextView android:id="@+id/artworkDescription" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:textSize="13sp"
             android:textColor="#D9FFFFFF" android:fontFamily="sans-serif" android:includeFontPadding="false"
             android:lineSpacingExtra="1dp" />
-        </com.gathin.tvhome.SummaryScrollView>
+        </com.tvdroid17.SummaryScrollView>
         <TextView android:id="@+id/artworkHint" android:layout_width="wrap_content"
             android:layout_height="34dp" android:layout_marginTop="20dp"
             android:paddingStart="32dp" android:paddingEnd="32dp" android:gravity="center"

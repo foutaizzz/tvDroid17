@@ -22,7 +22,7 @@ Les APK publiés seront attachés aux versions GitHub dans **Releases**. Sur la 
 ```sh
 adb connect ADRESSE_IP_DE_LA_TV:5555
 adb install -r tvDroid-17-v1.0.0.apk
-adb shell cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity
+adb shell cmd package set-home-activity --user 0 com.tvdroid17/.MainActivity
 ```
 
 `adb install -r` installe l’application, mais n’accorde pas à lui seul l’accès nécessaire au rétroéclairage ni le service SET/INPUT. Pour activer les intégrations de la TV Xiaomi de référence, construisez et déployez avec le script de la section suivante. Les commandes de retour au launcher d’origine sont plus bas.

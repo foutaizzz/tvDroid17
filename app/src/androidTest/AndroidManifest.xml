@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.gathin.tvhome.test">
+    package="com.tvdroid17.test">
     <!-- Each instrumentation class is declared so it can be run on its own with:
-         am instrument -w com.gathin.tvhome.test/com.gathin.tvhome.<Name> -->
-    <instrumentation android:name="com.gathin.tvhome.ArtworkInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="ArtworkInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.ArtworkSelectionInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="ArtworkSelectionInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.ContinuityInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="ContinuityInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.DockBlurDiagInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="DockBlurDiagInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.ControlPanelInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="ControlPanelInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.FadePerformanceInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="FadePerformanceInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.FrenchDescriptionInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="FrenchDescriptionInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.FullSummaryInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="FullSummaryInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.GridScrollInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="GridScrollInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.InternalSettingsInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="InternalSettingsInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.PolishInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="PolishInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.ReliabilityInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="ReliabilityInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.RemoteOverlayInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="RemoteOverlayInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.SettingsEntryInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="SettingsEntryInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.SettingsMenuInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="SettingsMenuInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.StartupArtworkInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="StartupArtworkInstrumentation" />
-    <instrumentation android:name="com.gathin.tvhome.WeatherDreamInstrumentation" android:targetPackage="com.gathin.tvhome" android:label="WeatherDreamInstrumentation" />
+         am instrument -w com.tvdroid17.test/com.tvdroid17.<Name> -->
+    <instrumentation android:name="com.tvdroid17.ArtworkInstrumentation" android:targetPackage="com.tvdroid17" android:label="ArtworkInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.ArtworkSelectionInstrumentation" android:targetPackage="com.tvdroid17" android:label="ArtworkSelectionInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.ContinuityInstrumentation" android:targetPackage="com.tvdroid17" android:label="ContinuityInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.DockBlurDiagInstrumentation" android:targetPackage="com.tvdroid17" android:label="DockBlurDiagInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.ControlPanelInstrumentation" android:targetPackage="com.tvdroid17" android:label="ControlPanelInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.FadePerformanceInstrumentation" android:targetPackage="com.tvdroid17" android:label="FadePerformanceInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.FrenchDescriptionInstrumentation" android:targetPackage="com.tvdroid17" android:label="FrenchDescriptionInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.FullSummaryInstrumentation" android:targetPackage="com.tvdroid17" android:label="FullSummaryInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.GridScrollInstrumentation" android:targetPackage="com.tvdroid17" android:label="GridScrollInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.InternalSettingsInstrumentation" android:targetPackage="com.tvdroid17" android:label="InternalSettingsInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.PolishInstrumentation" android:targetPackage="com.tvdroid17" android:label="PolishInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.ReliabilityInstrumentation" android:targetPackage="com.tvdroid17" android:label="ReliabilityInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.RemoteOverlayInstrumentation" android:targetPackage="com.tvdroid17" android:label="RemoteOverlayInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.SettingsEntryInstrumentation" android:targetPackage="com.tvdroid17" android:label="SettingsEntryInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.SettingsMenuInstrumentation" android:targetPackage="com.tvdroid17" android:label="SettingsMenuInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.StartupArtworkInstrumentation" android:targetPackage="com.tvdroid17" android:label="StartupArtworkInstrumentation" />
+    <instrumentation android:name="com.tvdroid17.WeatherDreamInstrumentation" android:targetPackage="com.tvdroid17" android:label="WeatherDreamInstrumentation" />
 </manifest>

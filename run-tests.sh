@@ -43,12 +43,12 @@ printf '%s\n' \
   "pm install -r /data/local/tmp/tvhome.apk" \
   "pm install -r /data/local/tmp/tvhome-test.apk" \
   "rm -f /data/local/tmp/tvhome.apk /data/local/tmp/tvhome-test.apk" \
-  "pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.gathin.tvhome android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; pm grant com.gathin.tvhome android.permission.NEARBY_WIFI_DEVICES 2>/dev/null" \
-  "pm grant com.gathin.tvhome.test android.permission.INJECT_EVENTS 2>/dev/null; echo test-perms-granted" \
+  "pm grant com.tvdroid17 android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.NEARBY_WIFI_DEVICES 2>/dev/null" \
+  "pm grant com.tvdroid17.test android.permission.INJECT_EVENTS 2>/dev/null; echo test-perms-granted" \
   | "$PY" -I tools/tv.py --batch > /dev/null 2>&1 || true
 
 # Discover every instrumentation class from the test sources.
-CLASSES=$(cd app/src/androidTest/java/com/gathin/tvhome && ls *Instrumentation.java 2>/dev/null | sed 's/\.java$//' | sort)
+CLASSES=$(cd app/src/androidTest/java/com/tvdroid17 && ls *Instrumentation.java 2>/dev/null | sed 's/\.java$//' | sort)
 if [ -z "$CLASSES" ]; then
   echo "No instrumentation classes found in the test sources" >&2
   exit 1
@@ -59,7 +59,7 @@ for name in $CLASSES; do
   case "$name" in *"$FILTER"*) ;; *) [ -n "$FILTER" ] && continue ;; esac
   echo "== $name"
   # Instrumentation runs can take minutes; give the shell read a long timeout.
-  out=$(printf '%s\n' "am instrument -w com.gathin.tvhome.test/com.gathin.tvhome.$name" \
+  out=$(printf '%s\n' "am instrument -w com.tvdroid17.test/com.tvdroid17.$name" \
         | TV_SHELL_TIMEOUT=600 "$PY" -I tools/tv.py --batch 2>&1 || true)
   # am instrument reports Activity.RESULT_OK (-1) as INSTRUMENTATION_CODE: -1 on success.
   if printf '%s' "$out" | grep -qE "INSTRUMENTATION_CODE: -1|verification=PASS"; then
@@ -78,10 +78,10 @@ done
 # on this firmware; a package uninstall silently drops it, so always re-assert it and verify it is
 # actually bound (retry a few times), then restore the screen timeout.
 printf '%s\n' \
-  "pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.gathin.tvhome android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; pm grant com.gathin.tvhome android.permission.NEARBY_WIFI_DEVICES 2>/dev/null" \
-  "cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity" \
-  "am force-stop com.gathin.tvhome" \
-  "c=0; for i in 1 2 3; do settings put secure enabled_accessibility_services com.gathin.tvhome/com.gathin.tvhome.SourceKeyService; settings put secure accessibility_enabled 1; sleep 2; c=\$(dumpsys accessibility | grep -c SourceKeyService); [ \"\$c\" -gt 0 ] && break; done; echo a11y-bound=\$c" \
+  "pm grant com.tvdroid17 android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.NEARBY_WIFI_DEVICES 2>/dev/null" \
+  "cmd package set-home-activity --user 0 com.tvdroid17/.MainActivity" \
+  "am force-stop com.tvdroid17" \
+  "c=0; for i in 1 2 3; do settings put secure enabled_accessibility_services com.tvdroid17/com.tvdroid17.SourceKeyService; settings put secure accessibility_enabled 1; sleep 2; c=\$(dumpsys accessibility | grep -c SourceKeyService); [ \"\$c\" -gt 0 ] && break; done; echo a11y-bound=\$c" \
   "input keyevent KEYCODE_HOME" \
   | "$PY" -I tools/tv.py --batch 2>&1 | grep -vE "RuntimeWarning|frozen site" || true
 

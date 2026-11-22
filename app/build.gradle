@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    namespace 'com.gathin.tvhome'
+    namespace 'com.tvdroid17'
     compileSdk 34
 
     buildFeatures { buildConfig true }
 
     defaultConfig {
-        applicationId 'com.gathin.tvhome'
+        applicationId 'com.tvdroid17'
         minSdk 26
         // targetSdk only changes behaviour on newer devices; on this Android 10 TV it is inert,
         // but keeping it current protects the launcher if it is ever installed on a newer TV.
@@ -18,7 +18,7 @@ android {
         versionName '1.0.0'
         // The TMDB read token is not compiled in: it is read from the television at runtime
         // (see TokenStore), so an APK that leaves the device carries no account key.
-        testInstrumentationRunner project.findProperty('testRunner') ?: 'com.gathin.tvhome.ArtworkInstrumentation'
+        testInstrumentationRunner project.findProperty('testRunner') ?: 'com.tvdroid17.ArtworkInstrumentation'
     }
 
     buildTypes {
