@@ -19,9 +19,9 @@
     <string name="live_tv_package" translatable="false"></string>
 
     <!-- Edit these four values for your location. No GPS or IP-based location is used. -->
-    <string name="weather_city" translatable="false">Paris</string>
-    <string name="weather_latitude" translatable="false">48.8566</string>
-    <string name="weather_longitude" translatable="false">2.3522</string>
+    <string name="weather_city" translatable="false">Aix-les-Bains</string>
+    <string name="weather_latitude" translatable="false">45.6886</string>
+    <string name="weather_longitude" translatable="false">5.9147</string>
     <string name="weather_timezone" translatable="false">Europe/Paris</string>
 
     <integer name="columns">6</integer>

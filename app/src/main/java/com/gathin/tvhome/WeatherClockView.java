@@ -63,9 +63,9 @@ final class WeatherClockView extends View {
         text(dialCanvas,weather==null?"—°":Math.round(weather.temperature)+"°",521.5f,272,174,medium,RED);
         if(weather!=null){
             icon(dialCanvas,526.5f,319,weather);
-            text(dialCanvas,weather.condition(),521.5f,391,32,bold,RED);
+            text(dialCanvas,weather.condition(),521.5f,391,32,medium,RED);
             text(dialCanvas,"↑ "+Math.round(weather.high)+"°  ↓ "+Math.round(weather.low)+"°",522.5f,434,33,bold,RED);
-        }else text(dialCanvas,loading?"Actualisation…":"Météo indisponible",521.5f,391,32,bold,RED);
+        }else text(dialCanvas,loading?"Actualisation…":"Météo indisponible",521.5f,391,32,medium,RED);
     }
     private void dial(float x,float y,float radius){
         // The superellipse border keeps the hour and minute marks inside the clock face.
