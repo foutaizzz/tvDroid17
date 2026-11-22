@@ -45,10 +45,9 @@ TV_HOST=ADRESSE_IP_DE_LA_TV ./build-and-install.sh
 Sous Windows PowerShell :
 
 ```powershell
-python -m venv toolsenv
-toolsenv\Scripts\pip.exe install -r tools
-equirements.txt
-.uild-and-install.ps1 -TvHost ADRESSE_IP_DE_LA_TV
+python -m venv tools\env
+tools\env\Scripts\pip.exe install -r tools\requirements.txt
+.\build-and-install.ps1 -TvHost ADRESSE_IP_DE_LA_TV
 ```
 
 Au premier déploiement, acceptez l’autorisation de débogage sur l’écran de la TV et cochez « Toujours autoriser ». Le script compile l’APK, l’installe, accorde les droits nécessaires, active SET/INPUT et choisit tvDroid 17 comme accueil. Il désactive également le launcher Google indiqué par `STOCK_LAUNCHER` (par défaut `com.google.android.tvlauncher`) ; cette étape est propre à la configuration Xiaomi de référence et réversible. N’utilisez pas ce script sans vérifier le nom du launcher d’origine sur un autre modèle.
