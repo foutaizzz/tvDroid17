@@ -15,6 +15,20 @@ Launcher pour téléviseurs Android TV, construit à partir de l’expérience v
 - Fournit un économiseur d’écran noir avec horloge rouge et météo Open-Meteo. La ville est définie manuellement ; aucune géolocalisation n’est utilisée. Sur la Xiaomi de référence, l’économiseur règle `picture_backlight` à 1 puis restaure la valeur précédente à sa fermeture. Cette intégration fabricant demande `WRITE_SECURE_SETTINGS`, accordée par ADB lors de l’installation.
 - Peut afficher les bandes-annonces YouTube et les résumés français si un jeton de lecture TMDB est fourni. Le jeton est stocké hors du dépôt et copié sur l’appareil au déploiement ; il n’est pas inclus dans l’APK.
 
+## Captures d’écran
+
+| Accueil + dock | Diaporama (slider) | Grille d’applications |
+|---|---|---|
+| ![Accueil](docs/screenshots/accueil.png) | ![Slider](docs/screenshots/slider.png) | ![Grille](docs/screenshots/grille.png) |
+
+| Centre de contrôle | Entrées TV | Préférences |
+|---|---|---|
+| ![Centre de contrôle](docs/screenshots/centre-de-controle.png) | ![Entrées](docs/screenshots/entrees.png) | ![Préférences](docs/screenshots/preferences.png) |
+
+| Économiseur d’écran |
+|---|
+| ![Économiseur](docs/screenshots/economiseur-ecran.png) |
+
 ## Installer une version publiée
 
 Les APK publiés seront attachés aux versions GitHub dans **Releases**. Sur la TV, autorisez le débogage réseau dans les options développeur et récupérez son adresse IP. Depuis un ordinateur du même réseau, installez Android Platform Tools, puis :
