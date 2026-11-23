@@ -1086,15 +1086,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View button = findViewById(R.id.btnSettings);
         ImageView icon = findViewById(R.id.btnSettingsIcon);
         if (button == null) return;
+        boolean focused = button.hasFocus();
         if (controlPanelOpen) {
-            // Centre de contrôle ouvert : rond blanc + icône sombre, comme le focus dans le panneau.
-            GradientDrawable white = new GradientDrawable();
-            white.setShape(GradientDrawable.OVAL);
-            white.setColor(Color.WHITE);
-            button.setBackground(white);
-            if (icon != null) icon.setColorFilter(0xFF0B0C08);
+            // Panneau ouvert : le cercle reste visible. Blanc + icône sombre quand le focus est
+            // sur le bouton (comme un bouton focusé du panneau), noir + icône blanche sinon.
+            if (focused) {
+                GradientDrawable white = new GradientDrawable();
+                white.setShape(GradientDrawable.OVAL);
+                white.setColor(Color.WHITE);
+                button.setBackground(white);
+                if (icon != null) icon.setColorFilter(0xFF0B0C08);
+            } else {
+                button.setBackground(controlButtonMaterial);
+                if (icon != null) icon.setColorFilter(Color.WHITE);
+            }
         } else {
-            button.setBackground(button.hasFocus() ? controlButtonMaterial : null);
+            button.setBackground(focused ? controlButtonMaterial : null);
             if (icon != null) icon.setColorFilter(Color.WHITE);
         }
     }

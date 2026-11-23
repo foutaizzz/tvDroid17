@@ -158,7 +158,6 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         // with a D-pad as long as they do not require a touchscreen (same rule as Play on TV).
         Map<ComponentName, ResolveInfo> found = new LinkedHashMap<>();
         Set<ComponentName> leanbackOnly = new HashSet<>();
-        Map<String, Boolean> systemPackages = new HashMap<>();
         Intent leanbackProbe = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
         for (ResolveInfo ri : pm.queryIntentActivities(leanbackProbe, 0)) {
             if (ri.activityInfo == null) continue;
@@ -189,9 +188,6 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             String pkg = ri.activityInfo.packageName;
             // A package with several launcher activities is still one app tile.
             if (!seenPackages.add(pkg)) continue;
-            int appFlags = ri.activityInfo.applicationInfo.flags;
-            systemPackages.put(pkg, (appFlags & (ApplicationInfo.FLAG_SYSTEM
-                    | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0);
             if (pkg.equals(ctx.getPackageName()) || hidden.contains(pkg)) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
             Entry cached = previous.get(component);
@@ -216,14 +212,6 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             }
             return a.label.compareToIgnoreCase(b.label);
         });
-        // Keep the apps already placed in the dock, but show only user-installed apps in the grid.
-        // The dock positions are resolved before filtering so pinned system apps keep their slots.
-        Set<String> dockPackages = new HashSet<>();
-        for (int i = 0; i < Math.min(dockSize, fresh.size()); i++) {
-            dockPackages.add(fresh.get(i).pkg);
-        }
-        fresh.removeIf(entry -> systemPackages.getOrDefault(entry.pkg, false)
-                && !dockPackages.contains(entry.pkg));
         return fresh;
     }
 
