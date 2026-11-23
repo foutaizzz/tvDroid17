@@ -39,11 +39,18 @@ if ($LASTEXITCODE -ne 0) { throw 'APK installation failed; home selection was le
 if ($LASTEXITCODE -ne 0) { throw 'Could not select the personalized launcher as Home' }
 # Xiaomi's Android TV firmware clears third-party accessibility services after a
 # package reinstall unless the service is explicitly enabled again. This service
-# is what receives the global SET key before Android Settings does.
-& $adb shell settings put secure enabled_accessibility_services com.tvdroid17/com.tvdroid17.SourceKeyService
-& $adb shell settings put secure accessibility_enabled 1
+# is what receives the global SET/INPUT keys. Re-assert it and VERIFY it is bound
+# (dumpsys) before continuing, retrying a few times.
+$a11y = 0
+for ($i = 0; $i -lt 5 -and $a11y -eq 0; $i++) {
+    & $adb shell settings put secure enabled_accessibility_services com.tvdroid17/com.tvdroid17.SourceKeyService
+    & $adb shell settings put secure accessibility_enabled 1
+    Start-Sleep -Seconds 2
+    $a11y = (& $adb shell dumpsys accessibility | Select-String -Pattern 'SourceKeyService').Count
+}
+Write-Host "a11y-bound=$a11y"
+if ($a11y -eq 0) { throw 'Could not bind the accessibility service (SET/INPUT keys will not work)' }
 & $adb shell pm grant com.tvdroid17 android.permission.WRITE_SECURE_SETTINGS
-if ($LASTEXITCODE -ne 0) { throw 'Could not enable the SET key service' }
 & $adb shell pm grant com.tvdroid17 android.permission.ACCESS_FINE_LOCATION
 & $adb shell pm grant com.tvdroid17 android.permission.ACCESS_COARSE_LOCATION
 & $adb shell pm grant com.tvdroid17 android.permission.NEARBY_WIFI_DEVICES

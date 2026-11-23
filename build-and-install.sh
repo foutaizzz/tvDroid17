@@ -47,13 +47,14 @@ if [ -z "$TOKEN" ]; then
   echo "Put the token in that file (one line, no quotes) to enable them."
 fi
 
+# A reinstall drops the accessibility service on this firmware: re-assert it and VERIFY
+# it is actually bound (dumpsys) before continuing, retrying a few times.
 printf '%s\n' \
   "pm install -r /data/local/tmp/tvdroid17.apk" \
   "rm -f /data/local/tmp/tvdroid17.apk" \
   "pm grant com.tvdroid17 android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; pm grant com.tvdroid17 android.permission.NEARBY_WIFI_DEVICES 2>/dev/null; echo wifi-granted" \
   "pm grant com.tvdroid17 android.permission.WRITE_SECURE_SETTINGS 2>/dev/null; echo picture-settings-granted" \
-  "settings put secure enabled_accessibility_services com.tvdroid17/com.tvdroid17.SourceKeyService" \
-  "settings put secure accessibility_enabled 1" \
+  "c=0; for i in 1 2 3 4 5; do settings put secure enabled_accessibility_services com.tvdroid17/com.tvdroid17.SourceKeyService; settings put secure accessibility_enabled 1; sleep 2; c=\$(dumpsys accessibility | grep -c SourceKeyService); [ \$c -gt 0 ] && break; done; echo a11y-bound=\$c" \
   "cmd package set-home-activity --user 0 com.tvdroid17/.MainActivity" \
   "pm disable-user --user 0 $STOCK_LAUNCHER" \
   "am start -n com.tvdroid17/.MainActivity >/dev/null 2>&1 || true" \
