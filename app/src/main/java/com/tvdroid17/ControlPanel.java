@@ -32,6 +32,17 @@ final class ControlPanel {
     private final int[] previousVisibility = new int[4];
     private View previousFocus;
     private Runnable onClosed;
+    private Runnable focusListener;
+
+    /** Called on every focus change inside the panel, so the host can restyle its anchor button. */
+    void setOnFocusChanged(Runnable r) { focusListener = r; }
+
+    private void notifyFocus() { if (focusListener != null) focusListener.run(); }
+
+    /** True when the current focus is the invisible proxy parked on the host's top-bar button. */
+    boolean isAnchorFocused() {
+        return popup.isShowing() && buttons[CONTROL] != null && activity.getCurrentFocus() == buttons[CONTROL];
+    }
 
     ControlPanel(Activity activity, View anchor, Runnable[] actions, String wifiName) {
         this(activity, anchor, actions, wifiName, null);
@@ -177,6 +188,7 @@ final class ControlPanel {
             title.setTextColor(focused ? FrostedControls.CONTROL_BUTTON_TINT : Color.WHITE);
             if (texts.getChildCount() > 1)
                 ((TextView) texts.getChildAt(1)).setTextColor(focused ? 0xCC0B0C08 : 0xCFFFFFFF);
+            notifyFocus();
         });
         put(tile, x, y, width, height);
     }
@@ -189,6 +201,7 @@ final class ControlPanel {
         square.setOnFocusChangeListener((v, focused) -> {
             image.setColorFilter(focused ? FrostedControls.CONTROL_BUTTON_TINT : Color.WHITE);
             v.invalidate();
+            notifyFocus();
         });
         put(square, x, 224, 50, 50);
     }
@@ -200,7 +213,7 @@ final class ControlPanel {
         view.setClickable(true);
         view.setContentDescription(label);
         view.setBackground(glass.material(view, dp(radius), FrostedControls.CONTROL_BUTTON_TINT));
-        view.setOnFocusChangeListener((v, focused) -> v.invalidate());
+        view.setOnFocusChangeListener((v, focused) -> { v.invalidate(); notifyFocus(); });
         view.setOnClickListener(v -> {
             dismiss();
             if (action != null) anchor.post(action);

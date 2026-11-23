@@ -1076,6 +1076,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 controlPanelOpen = false;
                 updateControlButtonAppearance();
             });
+            controlPanel.setOnFocusChanged(this::updateControlButtonAppearance);
         }
         controlPanelOpen = true;
         updateControlButtonAppearance();
@@ -1087,10 +1088,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ImageView icon = findViewById(R.id.btnSettingsIcon);
         if (button == null) return;
         boolean focused = button.hasFocus();
-        if (controlPanelOpen) {
-            // Panneau ouvert : le cercle reste visible. Blanc + icône sombre quand le focus est
-            // sur le bouton (comme un bouton focusé du panneau), noir + icône blanche sinon.
-            if (focused) {
+        // While the panel is open, the focus sits on the invisible proxy parked over this button
+        // right after opening: treat that as "focused on the button" so both entry paths (SET key
+        // and clicking the button) look identical.
+        boolean anchorFocused = focused
+                || (controlPanel != null && controlPanel.isShowing() && controlPanel.isAnchorFocused());
+        if (controlPanelOpen && controlPanel != null && controlPanel.isShowing()) {
+            // Panel open: circle always visible. White + dark icon when the focus is on the
+            // button (or its anchor proxy), black + white icon when navigating inside the panel.
+            if (anchorFocused) {
                 GradientDrawable white = new GradientDrawable();
                 white.setShape(GradientDrawable.OVAL);
                 white.setColor(Color.WHITE);
