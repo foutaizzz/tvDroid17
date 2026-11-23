@@ -11,59 +11,127 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 import java.lang.ref.WeakReference;
 
-/** Translucent host for the same controls over another app; Back returns to that app. */
+/**
+ * Translucent overlay shown on top of whatever app is running. Hosts either the control
+ * centre (SET) or the TV inputs panel (INPUT). Back returns to the app underneath.
+ */
 public class RemoteControlsActivity extends Activity {
     private static WeakReference<RemoteControlsActivity> foreground = new WeakReference<>(null);
     private ControlPanel panel;
-    static boolean toggleIfVisible() {
+    private InputsPanel inputsPanel;
+    private View anchor;
+    private View rootView;
+    private boolean showingInputs;
+
+    /**
+     * If the overlay is visible, switch it to the requested panel (cross-toggle: the active
+     * one closes, the other opens; pressing the same one again closes the overlay).
+     * Returns true when the overlay was visible and handled the switch.
+     */
+    static boolean switchTo(boolean inputs) {
         RemoteControlsActivity activity = foreground.get();
         if (activity == null || activity.isFinishing()) return false;
-        activity.runOnUiThread(activity::finish);
+        activity.runOnUiThread(() -> activity.showPanel(inputs));
         return true;
     }
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         foreground = new WeakReference<>(this);
-        float density=getResources().getDisplayMetrics().density;
-        FrameLayout root=new FrameLayout(this);
-        FrameLayout capsule=new FrameLayout(this);
-        FrameLayout.LayoutParams box=new FrameLayout.LayoutParams((int)(82*density),(int)(32*density),Gravity.TOP|Gravity.END);
-        box.topMargin=(int)(26*density);box.rightMargin=(int)(18*density);root.addView(capsule,box);
-        View anchor=new View(this);capsule.addView(anchor,new FrameLayout.LayoutParams(1,1));
+        float density = getResources().getDisplayMetrics().density;
+        FrameLayout root = new FrameLayout(this);
+        rootView = root;
+        FrameLayout capsule = new FrameLayout(this);
+        FrameLayout.LayoutParams box = new FrameLayout.LayoutParams((int) (82 * density), (int) (32 * density), Gravity.TOP | Gravity.END);
+        box.topMargin = (int) (26 * density); box.rightMargin = (int) (18 * density); root.addView(capsule, box);
+        anchor = new View(this); capsule.addView(anchor, new FrameLayout.LayoutParams(1, 1));
         setContentView(root);
-        Runnable[] actions=new Runnable[11];
-        actions[ControlPanel.POWER]=()->{
-            if(!SourceKeyService.showPowerOptions())Toast.makeText(this,R.string.not_available,Toast.LENGTH_SHORT).show();
+        inputsPanel = new InputsPanel(this, anchor, new FrostedControls());
+        Runnable[] actions = new Runnable[12];
+        actions[ControlPanel.POWER] = () -> {
+            if (!SourceKeyService.showPowerOptions()) Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
         };
-        actions[ControlPanel.SETTINGS]=()->open(DeviceSettingsActivity.intent(this,"device"));
-        actions[ControlPanel.WIFI]=()->open(DeviceSettingsActivity.intent(this,"wifi"));
-        actions[ControlPanel.AUDIO]=()->open(new Intent(Settings.ACTION_SOUND_SETTINGS));
-        actions[ControlPanel.TIMER]=()->nativePage(".partnercustomizer.timer.TimerActivity");
-        actions[ControlPanel.DEVICES]=()->nativePage(".accessories.AddAccessoryActivity");
-        actions[ControlPanel.CAPTIONS]=()->open(DeviceSettingsActivity.intent(this,"captions"));
-        actions[ControlPanel.SOURCES]=()->open(new Intent(this,MainActivity.class).putExtra(MainActivity.EXTRA_OPEN_INPUTS,true));
-        actions[ControlPanel.APPS]=()->open(new Intent(this,MainActivity.class));
-        actions[ControlPanel.HOME]=()->open(new Intent(this,MainActivity.class));
-        panel=new ControlPanel(this,anchor,actions,"");
-        panel.setOnClosed(this::finish);
-        root.post(()->{if(!isFinishing())panel.show(root);});
+        actions[ControlPanel.SETTINGS] = () -> open(DeviceSettingsActivity.intent(this, "device"));
+        actions[ControlPanel.WIFI] = () -> open(DeviceSettingsActivity.intent(this, "wifi"));
+        actions[ControlPanel.AUDIO] = () -> open(new Intent(Settings.ACTION_SOUND_SETTINGS));
+        actions[ControlPanel.TIMER] = () -> nativePage(".partnercustomizer.timer.TimerActivity");
+        actions[ControlPanel.DEVICES] = () -> nativePage(".accessories.AddAccessoryActivity");
+        actions[ControlPanel.CAPTIONS] = () -> open(DeviceSettingsActivity.intent(this, "captions"));
+        actions[ControlPanel.SOURCES] = () -> showPanel(true);   // open the inputs panel inside this overlay
+        actions[ControlPanel.APPS] = () -> open(new Intent(this, MainActivity.class));
+        actions[ControlPanel.HOME] = () -> open(new Intent(this, MainActivity.class));
+        panel = new ControlPanel(this, anchor, actions, "");
+        panel.setOnClosed(() -> {
+            if (!showingInputs) finish();
+        });
+        root.post(() -> {
+            if (isFinishing()) return;
+            boolean openInputs = getIntent().getBooleanExtra(MainActivity.EXTRA_OPEN_INPUTS, false);
+            if (openInputs) getIntent().removeExtra(MainActivity.EXTRA_OPEN_INPUTS);
+            showPanel(openInputs);
+        });
     }
-    @Override public boolean dispatchKeyEvent(KeyEvent event){
-        if(event.getKeyCode()==KeyEvent.KEYCODE_SETTINGS){
-            if(event.getAction()==KeyEvent.ACTION_DOWN && event.getRepeatCount()==0)finish();
+
+    /** Cross-toggle: same panel requested -> close overlay; other panel -> switch. */
+    private void showPanel(boolean inputs) {
+        if (inputs == showingInputs && (inputs ? inputsPanel.isShowing() : panel.isShowing())) {
+            // same panel already open: close the overlay entirely
+            if (inputs) inputsPanel.dismiss(); else panel.dismiss();
+            showingInputs = false;
+            finish();
+            return;
+        }
+        if (inputs) {
+            panel.dismiss();
+            inputsPanel.show();
+        } else {
+            inputsPanel.dismiss();
+            panel.show(rootView);
+        }
+        showingInputs = inputs;
+    }
+
+    @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_SETTINGS) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) finish();
+            return true;
+        }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_TV_INPUT) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) showPanel(true);
             return true;
         }
         return super.dispatchKeyEvent(event);
     }
-    @Override protected void onDestroy(){
-        if(foreground.get()==this)foreground.clear();
+
+    @Override protected void onDestroy() {
+        if (foreground.get() == this) foreground.clear();
         super.onDestroy();
     }
-    @Override public void onBackPressed(){finish();}
-    @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);finish();}
-    @Override protected void onPause(){super.onPause();if(panel!=null)panel.dismiss();finish();}
-    private void nativePage(String suffix){open(new Intent().setClassName("com.android.tv.settings","com.android.tv.settings"+suffix));}
-    private void open(Intent intent){
-        try{startActivity(intent);}catch(android.content.ActivityNotFoundException|SecurityException unavailable){Toast.makeText(this,R.string.not_available,Toast.LENGTH_SHORT).show();}
+
+    @Override public void onBackPressed() {
+        if (showingInputs && inputsPanel != null && inputsPanel.isShowing()) {
+            inputsPanel.dismiss();
+            showingInputs = false;
+            finish();
+            return;
+        }
+        finish();
+    }
+
+    @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); finish(); }
+    @Override protected void onPause() {
+        super.onPause();
+        if (panel != null) panel.dismiss();
+        if (inputsPanel != null) inputsPanel.dismiss();
+        finish();
+    }
+
+    private void nativePage(String suffix) { open(new Intent().setClassName("com.android.tv.settings", "com.android.tv.settings" + suffix)); }
+
+    private void open(Intent intent) {
+        try { startActivity(intent); }
+        catch (android.content.ActivityNotFoundException | SecurityException unavailable) {
+            Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
+        }
     }
 }

@@ -55,3 +55,11 @@ com.mediatek.wwtv.setupwizard       # WwTV setup assistant
 com.mediatek.tv.agent               # TV agent (tuner/live-TV related)
 com.mediatek.tv.factory             # factory menu
 mediatek.factorymenu.ui             # factory menu UI
+
+# Residus Mitv/Xiaomi inutiles en mode apps-uniquement (desactives, jamais desinstalles)
+com.mstar.android.tv.disclaimercustomization   # ecran de non-responsabilite au boot
+com.xiaomi.mitv.mediaexplorer                  # explorateur de medias Mitv
+com.xiaomi.mitv.smartshare                      # partage Mi
+com.xiaomi.mitv.manualhelp                      # manuel utilisateur
+com.mitv.gallery                                # galerie Mitv
+com.mitv.tvhome.atv                             # accueil PatchWall Mitv

@@ -37,3 +37,8 @@ Read this file and `README.md` before changing tvDroid 17.
 - Windows: `build-and-install.ps1 -TvHost <TV-IP>`.
 - Unit/instrumentation test sources are under `app/src/androidTest`; only run tests when asked.
 - Keep user-facing docs in French and update README configuration guidance whenever a setting or TV-specific dependency changes.
+
+## Rappels de build (ne pas oublier)
+
+- **Touches SET et INPUT** : elles doivent rester fonctionnelles à chaque build. SET ouvre le centre de contrôle, INPUT ouvre le panneau des entrées — tous deux **en overlay par-dessus l'app en cours** (pas de retour forcé à l'accueil depuis une app tierce). Toggle croisé : si l'un est ouvert et qu'on appuie sur l'autre, l'actif se ferme et l'autre s'ouvre.
+- Toujours rebuild + réinstaller sur la TV après une modif de `SourceKeyService` / `RemoteControlsActivity` / `InputsPanel`, puis re-binder le service d'accessibilité (`settings put secure enabled_accessibility_services com.tvdroid17/com.tvdroid17.SourceKeyService`) car une réinstallation le fait sauter.

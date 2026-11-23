@@ -275,7 +275,15 @@ final class ControlPanel {
     }
 
     boolean isShowing() { return popup.isShowing(); }
-    void dismiss() { popup.dismiss(); }
+    /** Reverse of the show animation: fade/shrink up, then actually dismiss the popup. */
+    void dismiss() {
+        if (!popup.isShowing()) return;
+        sheet.animate().cancel();
+        sheet.animate().alpha(0f).scaleY(.92f).translationY(-dp(8)).setDuration(180)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f))
+                .withEndAction(() -> { if (popup.isShowing()) popup.dismiss(); })
+                .start();
+    }
     void setOnClosed(Runnable listener) { onClosed = listener; }
 
     private void put(View view, int x, int y, int width, int height) {

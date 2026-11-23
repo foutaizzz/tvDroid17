@@ -134,7 +134,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     };
     private ControlPanel controlPanel;
-    private PopupWindow inputPopup;
+    private InputsPanel inputsPanel;
     private Drawable controlButtonMaterial;
     private boolean controlPanelOpen;
     private boolean fixedArtworkTest;
@@ -275,6 +275,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.setHasFixedSize(true);
         grid.setItemAnimator(null);
         dockDecoration = new DockDecoration(COLUMNS, density, artworkView);
+        inputsPanel = new InputsPanel(this, findViewById(R.id.btnSettings), dockDecoration.sharedGlass());
         if (artworkHint != null) artworkHint.setBackground(dockDecoration.materialFor(artworkHint, 17f));
         View statusCapsule = findViewById(R.id.statusCapsule);
         if (statusCapsule != null) statusCapsule.setBackground(dockDecoration.materialFor(statusCapsule, 16f));
@@ -460,7 +461,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             exitEditing(true);   // Back cancels the move and restores the previous order
             return;
         }
-        if (inputPopup != null && inputPopup.isShowing()) {
+        if (inputsPanel != null && inputsPanel.isShowing()) {
             dismissInputs();
             return;
         }
@@ -662,7 +663,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return true;
         }
         if (event.getKeyCode() == KeyEvent.KEYCODE_BACK
-                && inputPopup != null && inputPopup.isShowing()) {
+                && inputsPanel != null && inputsPanel.isShowing()) {
             if (event.getAction() == KeyEvent.ACTION_DOWN) dismissInputs();
             return true;
         }
@@ -1083,8 +1084,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void updateControlButtonAppearance() {
         View button = findViewById(R.id.btnSettings);
+        ImageView icon = findViewById(R.id.btnSettingsIcon);
         if (button == null) return;
-        button.setBackground(controlPanelOpen || button.hasFocus() ? controlButtonMaterial : null);
+        if (controlPanelOpen) {
+            // Centre de contrôle ouvert : rond blanc + icône sombre, comme le focus dans le panneau.
+            GradientDrawable white = new GradientDrawable();
+            white.setShape(GradientDrawable.OVAL);
+            white.setColor(Color.WHITE);
+            button.setBackground(white);
+            if (icon != null) icon.setColorFilter(0xFF0B0C08);
+        } else {
+            button.setBackground(button.hasFocus() ? controlButtonMaterial : null);
+            if (icon != null) icon.setColorFilter(Color.WHITE);
+        }
     }
 
     private void showSettingsMenu() {
@@ -1117,142 +1129,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Dropdown menu under the Inputs pill: HDMI ports (with connection state), AV and Live TV. */
     private void toggleInputs() {
-        if (inputPopup != null && inputPopup.isShowing()) dismissInputs();
-        else showInputs();
+        if (inputsPanel == null) return;
+        if (controlPanel != null) controlPanel.dismiss();
+        inputsPanel.toggle();
     }
 
     private void dismissInputs() {
-        PopupWindow current = inputPopup;
-        inputPopup = null;
-        if (current != null && current.isShowing()) current.dismiss();
+        if (inputsPanel != null) inputsPanel.dismiss();
     }
 
     private void showInputs() {
-        if (inputPopup != null && inputPopup.isShowing()) return;
+        if (inputsPanel == null) return;
         if (controlPanel != null) controlPanel.dismiss();
-        View anchor = findViewById(R.id.btnSettings);
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
-        panel.setBackground(dockDecoration.materialFor(panel, 20f));
-        LinearLayout rows = panel.findViewById(R.id.rows);
-
-        // Compact: as wide as the Inputs pill (a touch wider so "HDMI 1" fits), hanging right below it.
-        int width = Math.max(anchor.getWidth(), (int) (150 * density));
-        final PopupWindow popup = new PopupWindow(panel, width, ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        inputPopup = popup;
-        popup.setOnDismissListener(() -> {
-            if (inputPopup == popup) inputPopup = null;
-        });
-        popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));   // needed for Back to dismiss
-        popup.setOutsideTouchable(true);
-        popup.setAnimationStyle(0);
-        popup.setElevation(0f);
-
-        TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
-        String tunerId = null;
-        if (tim != null) {
-            List<TvInputInfo> inputs = new ArrayList<>(tim.getTvInputList());
-            // HDMI ports first in port order, then AV and the rest.
-            Collections.sort(inputs, (a, b) -> {
-                boolean ha = a.getType() == TvInputInfo.TYPE_HDMI, hb = b.getType() == TvInputInfo.TYPE_HDMI;
-                if (ha != hb) return ha ? -1 : 1;
-                return String.valueOf(a.loadLabel(this)).compareToIgnoreCase(String.valueOf(b.loadLabel(this)));
-            });
-            // Some TVs (Sony) report every HDMI port as connected whether or not anything is plugged in,
-            // so drop the HDMI status then. A TV with every port really in use loses it too.
-            int hdmiPorts = 0, hdmiConnected = 0;
-            for (TvInputInfo info : inputs) {
-                if (!info.isPassthroughInput() || info.getType() != TvInputInfo.TYPE_HDMI) continue;
-                hdmiPorts++;
-                if (tim.getInputState(info.getId()) == TvInputManager.INPUT_STATE_CONNECTED) hdmiConnected++;
-            }
-            boolean hdmiStateBogus = hdmiPorts > 1 && hdmiConnected == hdmiPorts;
-            for (TvInputInfo info : inputs) {
-                if (info.getType() == TvInputInfo.TYPE_TUNER
-                        && (info.getServiceInfo().applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0
-                        && (tunerId == null || info.getId().compareTo(tunerId) < 0)) {
-                    tunerId = info.getId();
-                }
-                if (!info.isPassthroughInput()) continue;
-                CharSequence l = info.loadLabel(this);
-                String label = l == null ? info.getId() : l.toString();
-                boolean hdmi = info.getType() == TvInputInfo.TYPE_HDMI;
-                if (hdmi && !label.toUpperCase().contains("HDMI")) label = "HDMI " + label;
-                final String id = info.getId();
-                int state = hdmi && hdmiStateBogus ? -1 : tim.getInputState(id);
-                addInputRow(rows, popup, hdmi ? R.drawable.ic_input : R.drawable.ic_av, label, state,
-                        () -> open(new Intent(Intent.ACTION_VIEW).setDataAndType(
-                                TvContract.buildChannelUriForPassthroughInput(id), "vnd.android.cursor.item/channel")));
-            }
-        }
-        Intent liveTv = liveTvPkg.isEmpty() ? null : getPackageManager().getLeanbackLaunchIntentForPackage(liveTvPkg);
-        if (liveTv != null && tunerId != null) {
-            liveTv = new Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(TvContract.buildChannelUriForPassthroughInput(tunerId), "vnd.android.cursor.item/channel")
-                    .setPackage(liveTvPkg);
-        }
-        if (liveTv != null) {
-            final Intent liveTvIntent = liveTv;
-            addInputRow(rows, popup, R.drawable.ic_livetv, getString(R.string.live_tv), -1, () -> open(liveTvIntent));
-        }
-        if (rows.getChildCount() == 0) {
-            Toast.makeText(this, R.string.no_inputs, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Fit the widest row: TVs that report a status on every port (Sony) would otherwise squeeze the names out.
-        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        popup.setWidth(Math.max(width, panel.getMeasuredWidth()));
-
-        // Drop in: fade and unfold from the top edge.
-        panel.setAlpha(0f);
-        panel.setPivotY(0f);
-        panel.setScaleY(0.92f);
-        panel.setTranslationY(-8 * density);
-        popup.showAsDropDown(anchor, Math.round(4 * density), (int) (10 * density), Gravity.END);
-        panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(220)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
-        rows.getChildAt(0).requestFocus();
-    }
-
-    private void addInputRow(LinearLayout rows, PopupWindow popup, int iconRes, String title, int state, Runnable action) {
-        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        Drawable idleBackground = dockDecoration.controlButtonMaterial(row, 13f);
-        android.graphics.drawable.GradientDrawable focusedBackground = new android.graphics.drawable.GradientDrawable();
-        focusedBackground.setColor(Color.WHITE);
-        focusedBackground.setCornerRadius(13f * density);
-        row.setBackground(idleBackground);
-        row.setOnFocusChangeListener((v, focused) ->
-                v.setBackground(focused ? focusedBackground : idleBackground));
-        ((ImageView) row.findViewById(R.id.icon)).setImageResource(iconRes);
-        ((TextView) row.findViewById(R.id.title)).setText(title);
-        TextView status = row.findViewById(R.id.status);
-        View dot = row.findViewById(R.id.dot);
-        // This TV reports "standby" for every port whether or not something is plugged in, so only
-        // definite states are shown.
-        if (state == TvInputManager.INPUT_STATE_CONNECTED) {
-            status.setText(R.string.connected);
-            dot.setVisibility(View.VISIBLE);
-        } else if (state == TvInputManager.INPUT_STATE_DISCONNECTED) {
-            status.setText(R.string.not_connected);
-            dot.setVisibility(View.GONE);
-        } else {
-            status.setVisibility(View.GONE);
-            dot.setVisibility(View.GONE);
-        }
-        row.setOnClickListener(v -> {
-            popup.dismiss();
-            action.run();
-        });
-        row.setOnKeyListener((v, keyCode, event) -> {
-            if ((keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE)
-                    && event.getAction() == KeyEvent.ACTION_DOWN) {
-                popup.dismiss();
-                return true;
-            }
-            return false;
-        });
-        LinearLayout.LayoutParams rowParams = (LinearLayout.LayoutParams) row.getLayoutParams();
-        rowParams.setMargins(0, Math.round(3 * density), 0, Math.round(3 * density));
-        rows.addView(row, rowParams);
+        inputsPanel.show();
     }
 }

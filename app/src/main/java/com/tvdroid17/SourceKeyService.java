@@ -50,7 +50,8 @@ public class SourceKeyService extends AccessibilityService {
         }
         if (keyCode == KeyEvent.KEYCODE_SETTINGS) {
             if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
-                if (!RemoteControlsActivity.toggleIfVisible() && !MainActivity.toggleForegroundControls())
+                // Overlay already open: cross-toggle or close. Else home panel, else overlay.
+                if (!RemoteControlsActivity.switchTo(false) && !MainActivity.toggleForegroundControls())
                     startActivity(new Intent(this, RemoteControlsActivity.class)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP));
             }
@@ -58,11 +59,11 @@ public class SourceKeyService extends AccessibilityService {
         }
         if (keyCode != KeyEvent.KEYCODE_TV_INPUT) return false;
         if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
-            if (!MainActivity.toggleForegroundInputs()) {
-                startActivity(new Intent(this, MainActivity.class)
+            // INPUT behaves like SET: overlay on top of the current app, never back to home.
+            if (!RemoteControlsActivity.switchTo(true) && !MainActivity.toggleForegroundInputs()) {
+                startActivity(new Intent(this, RemoteControlsActivity.class)
                         .putExtra(MainActivity.EXTRA_OPEN_INPUTS, true)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP));
             }
         }
         return true;

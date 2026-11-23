@@ -10,20 +10,14 @@
     </string-array>
 
     <string-array name="hidden_apps">
-        <item>com.mitv.tvhome.atv</item>
         <!-- TvCenter gere les entrees HDMI : ne JAMAIS le desactiver ni le desinstaller -->
         <item>com.mediatek.wwtv.tvcenter</item>
-        <item>com.mitv.gallery</item>
-        <item>com.xiaomi.mitv.manualhelp</item>
-        <!-- cachees de la grille (services systeme ou residus, packages toujours actifs) -->
-        <item>com.soundcloud.android</item>
+        <!-- services/residus systeme caches de la grille (packages toujours actifs) -->
         <item>com.mstar.android.tv.disclaimercustomization</item>
         <item>com.mediatek.tv.service</item>
         <item>com.mediatek.wwtv.webview</item>
         <item>com.google.android.tv.remote.service</item>
         <item>com.android.deskclock</item>
-        <item>com.xiaomi.mitv.mediaexplorer</item>
-        <item>com.xiaomi.mitv.smartshare</item>
     </string-array>
 
     <string name="live_tv_package" translatable="false"></string>
