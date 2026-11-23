@@ -360,6 +360,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        // The firmware can drop the accessibility service on reinstall/force-stop/reboot:
+        // re-assert it (and verify via AccessibilityManager) every time Home comes back.
+        A11yRebinder.ensureBound(this);
         ScreensaverBacklight.restore(this);
         updateArtworkTarget();
         artworkView.setBackdropBlurred(false);
