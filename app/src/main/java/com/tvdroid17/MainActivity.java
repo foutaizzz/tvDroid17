@@ -136,6 +136,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ControlPanel controlPanel;
     private InputsPanel inputsPanel;
     private Drawable controlButtonMaterial;
+    /** The white circle behind the top-bar icon; the frosted one uses the same inset. */
+    private Drawable controlButtonWhite;
+    /** Margin left around the top-bar icon, so the circle stays slightly smaller than the button. */
+    private static final float CONTROL_BUTTON_INSET_DP = 1.5f;
     private boolean controlPanelOpen;
     private boolean fixedArtworkTest;
     private SettingsMenu settingsMenu;
@@ -286,9 +290,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View controlButton = findViewById(R.id.btnSettings);
         if (controlButton != null) {
             // Preserve the existing right-side icon position; inset only its circular backdrop.
-            controlButton.setTranslationX(4f * density);
+            controlButton.setTranslationX(5f * density);
+            int inset = Math.round(CONTROL_BUTTON_INSET_DP * density);
             controlButtonMaterial = new InsetDrawable(
-                    dockDecoration.controlButtonMaterial(controlButton, 14f), Math.round(0f * density));
+                    dockDecoration.controlButtonMaterial(controlButton, 14f), inset);
+            GradientDrawable white = new GradientDrawable();
+            white.setShape(GradientDrawable.OVAL);
+            white.setColor(Color.WHITE);
+            controlButtonWhite = new InsetDrawable(white, inset);
             controlButton.setBackground(null);
             controlButton.setOnFocusChangeListener((v, focused) -> updateControlButtonAppearance());
         }
@@ -1098,10 +1107,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // when the focus is on the button or its anchor proxy, black + white icon otherwise.
             boolean anchorFocused = controlPanel.isAnchorFocused();
             if (anchorFocused) {
-                GradientDrawable white = new GradientDrawable();
-                white.setShape(GradientDrawable.OVAL);
-                white.setColor(Color.WHITE);
-                button.setBackground(white);
+                button.setBackground(controlButtonWhite);
                 if (icon != null) icon.setColorFilter(0xFF0B0C08);
             } else {
                 button.setBackground(controlButtonMaterial);
