@@ -1091,14 +1091,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ImageView icon = findViewById(R.id.btnSettingsIcon);
         if (button == null) return;
         boolean focused = button.hasFocus();
-        // While the panel is open, the focus sits on the invisible proxy parked over this button
-        // right after opening: treat that as "focused on the button" so both entry paths (SET key
-        // and clicking the button) look identical.
-        boolean anchorFocused = focused
-                || (controlPanel != null && controlPanel.isShowing() && controlPanel.isAnchorFocused());
-        if (controlPanelOpen && controlPanel != null && controlPanel.isShowing()) {
-            // Panel open: circle always visible. White + dark icon when the focus is on the
-            // button (or its anchor proxy), black + white icon when navigating inside the panel.
+        boolean panelOpen = controlPanelOpen && controlPanel != null && controlPanel.isShowing();
+        if (panelOpen) {
+            // While the popup owns the window focus, button.hasFocus() is unreliable (it can
+            // stay true after a click): only trust the real current focus. White + dark icon
+            // when the focus is on the button or its anchor proxy, black + white icon otherwise.
+            boolean anchorFocused = controlPanel.isAnchorFocused();
             if (anchorFocused) {
                 GradientDrawable white = new GradientDrawable();
                 white.setShape(GradientDrawable.OVAL);
