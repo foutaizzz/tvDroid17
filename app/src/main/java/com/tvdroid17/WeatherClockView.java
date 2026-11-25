@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.view.View;
 import java.util.Calendar;
@@ -94,23 +95,33 @@ final class WeatherClockView extends View {
         double angle=Math.toRadians(degrees-90);float dx=(float)Math.cos(angle),dy=(float)Math.sin(angle);
         line(c,x-dx*tail,y-dy*tail,x+dx*length,y+dy*length,width,color);
     }
-    /** Aiguille principale : tige fine depuis le moyeu, evasement conique, corps plein, bout arrondi.
+    /** Aiguille principale : tige fine depuis le moyeu, epaulement arrondi en demi-disque
+     *  (meme rayon que l'arrondi de la pointe), corps plein, bout arrondi.
      *  tip = longueur totale jusqu'a la pointe (bout arrondi compris), shoulder = fin de la tige,
-     *  taper = longueur de l'evasement, shaftW = largeur de la tige, bodyW = largeur du corps. */
+     *  taper = longueur de l'epaulement, shaftW = largeur de la tige, bodyW = largeur du corps. */
     private void mainHand(Canvas c,float x,float y,float degrees,float tip,float shoulder,float taper,float shaftW,float bodyW){
         double angle=Math.toRadians(degrees-90);
         float dx=(float)Math.cos(angle),dy=(float)Math.sin(angle);
         float px=-dy,py=dx;                       // perpendiculaire a l'axe
         float sh=shaftW/2f,bh=bodyW/2f;
         float base=tip-bh;                        // le bout arrondi depasse de bh
+        float body=shoulder+taper;                // debut du corps large
+        // L'epaulement est un demi-disque de rayon bh, comme l'arrondi de la pointe : il rejoint
+        // la tige sur son bord le plus arriere et s'appuie tangentiellement sur le corps.
+        float back=(float)Math.sqrt(Math.max(0f,bh*bh-sh*sh));   // recul du demi-disque
+        float stem=body-back;                    // fin de la tige, cote +perp
+        float baseAngle=(float)Math.toDegrees(Math.atan2(dy,dx));
+        float sweep=(float)Math.toDegrees(Math.acos(Math.min(1f,Math.max(-1f,sh/bh))));
+        float cx=x+dx*body,cy=y+dy*body;         // centre du demi-disque, sur l'axe
+        RectF oval=new RectF(cx-bh,cy-bh,cx+bh,cy+bh);
         Path p=new Path();
         p.moveTo(x+px*sh,y+py*sh);                                     // depart, cote +perp
-        p.lineTo(x+dx*shoulder+px*sh,y+dy*shoulder+py*sh);             // fin de la tige
-        p.lineTo(x+dx*(shoulder+taper)+px*bh,y+dy*(shoulder+taper)+py*bh); // fin de l'evasement
+        p.lineTo(x+dx*stem+px*sh,y+dy*stem+py*sh);                     // fin de la tige, cote +perp
+        p.arcTo(oval,baseAngle+90f+sweep,-sweep);                      // epaulement, cote +perp
         p.lineTo(x+dx*base+px*bh,y+dy*base+py*bh);                     // corps, cote +perp
         p.lineTo(x+dx*base-px*bh,y+dy*base-py*bh);                     // corps, cote -perp
-        p.lineTo(x+dx*(shoulder+taper)-px*bh,y+dy*(shoulder+taper)-py*bh);
-        p.lineTo(x+dx*shoulder-px*sh,y+dy*shoulder-py*sh);
+        p.lineTo(cx-px*bh,cy-py*bh);                                   // epaulement, cote -perp
+        p.arcTo(oval,baseAngle+270f,-sweep);                            // epaulement, cote -perp
         p.lineTo(x-px*sh,y-py*sh);
         p.close();
         paint.setStyle(Paint.Style.FILL);paint.setColor(RED);
