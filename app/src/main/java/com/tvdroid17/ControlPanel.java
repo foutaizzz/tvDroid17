@@ -33,16 +33,19 @@ final class ControlPanel {
     private View previousFocus;
     private Runnable onClosed;
     private Runnable focusListener;
+    /** True while the focus is on the CONTROL proxy, which is parked over the host's top-bar button. */
+    private boolean anchorFocused;
 
     /** Called on every focus change inside the panel, so the host can restyle its anchor button. */
     void setOnFocusChanged(Runnable r) { focusListener = r; }
 
-    private void notifyFocus() { if (focusListener != null) focusListener.run(); }
-
-    /** True when the current focus is the invisible proxy parked on the host's top-bar button. */
-    boolean isAnchorFocused() {
-        return popup.isShowing() && buttons[CONTROL] != null && activity.getCurrentFocus() == buttons[CONTROL];
+    private void onTileFocus(int index, boolean focused) {
+        anchorFocused = focused && index == CONTROL;
+        if (focusListener != null) focusListener.run();
     }
+
+    /** True when the focus is on the invisible proxy parked on the host's top-bar button. */
+    boolean isAnchorFocused() { return anchorFocused; }
 
     ControlPanel(Activity activity, View anchor, Runnable[] actions, String wifiName) {
         this(activity, anchor, actions, wifiName, null);
@@ -121,6 +124,7 @@ final class ControlPanel {
         popup.setElevation(0);
         popup.setAnimationStyle(0);
         popup.setOnDismissListener(() -> {
+            anchorFocused = false;
             if (artwork != null) artwork.setVisualChangedListener(null);
             artwork = null;
             // Only clear a private glass; a shared one must keep the dock's blur alive.
@@ -188,7 +192,7 @@ final class ControlPanel {
             title.setTextColor(focused ? FrostedControls.CONTROL_BUTTON_TINT : Color.WHITE);
             if (texts.getChildCount() > 1)
                 ((TextView) texts.getChildAt(1)).setTextColor(focused ? 0xCC0B0C08 : 0xCFFFFFFF);
-            notifyFocus();
+            onTileFocus(index, focused);
         });
         put(tile, x, y, width, height);
     }
@@ -201,7 +205,7 @@ final class ControlPanel {
         square.setOnFocusChangeListener((v, focused) -> {
             image.setColorFilter(focused ? FrostedControls.CONTROL_BUTTON_TINT : Color.WHITE);
             v.invalidate();
-            notifyFocus();
+            onTileFocus(index, focused);
         });
         put(square, x, 224, 50, 50);
     }
@@ -213,7 +217,7 @@ final class ControlPanel {
         view.setClickable(true);
         view.setContentDescription(label);
         view.setBackground(glass.material(view, dp(radius), FrostedControls.CONTROL_BUTTON_TINT));
-        view.setOnFocusChangeListener((v, focused) -> { v.invalidate(); notifyFocus(); });
+        view.setOnFocusChangeListener((v, focused) -> { v.invalidate(); onTileFocus(index, focused); });
         view.setOnClickListener(v -> {
             dismiss();
             if (action != null) anchor.post(action);
