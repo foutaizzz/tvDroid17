@@ -20,6 +20,8 @@ final class WeatherClockView extends View {
     private static final float CX=275f, CY=269f, DIAL_R=163f;
     private static final int SECOND_HAND_RED=0xFFB20004;
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+    /** Blits the cached dial; filtering keeps it smooth if the size ever changes mid-frame. */
+    private final Paint bitmapPaint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
     private final Typeface medium,bold;
     private WeatherData weather;
     private boolean loading=true;
@@ -35,9 +37,13 @@ final class WeatherClockView extends View {
         if(scale<=0)return;
         canvas.save();canvas.translate((getWidth()-960*scale)/2,(getHeight()-540*scale)/2);canvas.scale(scale,scale);
         // Keep the composition fixed inside the canvas, scaling it uniformly to the screen.
-        renderDial();
-        canvas.drawBitmap(dialCache,0,0,null);
+        renderDial(scale);
         // Only the hands move every frame; the dial behind them is a cached bitmap.
+        canvas.restore();
+        // The dial is cached at the screen resolution and blitted 1:1, so its text and
+        // graduations stay crisp instead of being upscaled from a smaller bitmap.
+        canvas.drawBitmap(dialCache,0,0,bitmapPaint);
+        canvas.save();canvas.translate((getWidth()-960*scale)/2,(getHeight()-540*scale)/2);canvas.scale(scale,scale);
         Calendar now=Calendar.getInstance();
         float seconds=now.get(Calendar.SECOND)+now.get(Calendar.MILLISECOND)/1000f;
         float minutes=now.get(Calendar.MINUTE)+seconds/60f;
@@ -51,13 +57,21 @@ final class WeatherClockView extends View {
         paint.setColor(Color.BLACK);canvas.drawCircle(CX,CY,3.25f,paint);
         canvas.restore();
     }
-    /** The dial and weather labels are cached and redrawn only when weather changes. */
-    private void renderDial(){
+    /** The dial and weather labels are cached at the screen resolution, and redrawn only when
+     *  the weather changes or the view is resized. */
+    private void renderDial(float scale){
         String weatherKey=(weather==null?"-":weather.code+"|"+weather.temperature+"|"+weather.condition()+"|"+weather.high+"|"+weather.low+"|"+weather.day)+"|"+loading;
-        if(dialCache==null){dialCache=Bitmap.createBitmap(960,540,Bitmap.Config.ARGB_8888);dialCanvas=new Canvas(dialCache);}
+        if(dialCache==null||dialCache.getWidth()!=getWidth()||dialCache.getHeight()!=getHeight()){
+            dialCache=Bitmap.createBitmap(getWidth(),getHeight(),Bitmap.Config.ARGB_8888);
+            dialCanvas=new Canvas(dialCache);
+            cachedWeatherKey="";                       // force a repaint at the new size
+        }
         if(weatherKey.equals(cachedWeatherKey))return;
         cachedWeatherKey=weatherKey;
         dialCanvas.drawColor(Color.BLACK);
+        // Same transform as the hands, so the cached dial and the moving hands stay aligned.
+        dialCanvas.save();
+        dialCanvas.translate((getWidth()-960*scale)/2,(getHeight()-540*scale)/2);dialCanvas.scale(scale,scale);
         dial(CX,CY,DIAL_R);
         // Same fixed layout, with the city supplied by this install's configuration.
         text(dialCanvas,city,520.5f,132,40,bold,RED);
@@ -67,6 +81,7 @@ final class WeatherClockView extends View {
             text(dialCanvas,weather.condition(),521.5f,391,32,medium,RED);
             text(dialCanvas,"↑ "+Math.round(weather.high)+"°  ↓ "+Math.round(weather.low)+"°",522.5f,434,33,bold,RED);
         }else text(dialCanvas,loading?"Actualisation…":"Météo indisponible",521.5f,391,32,medium,RED);
+        dialCanvas.restore();
     }
     private void dial(float x,float y,float radius){
         // The superellipse border keeps the hour and minute marks inside the clock face.
