@@ -69,14 +69,13 @@ final class ControlPanel {
         controls = new FrameLayout(activity);
         controls.setClipChildren(false);
         controls.setClipToPadding(false);
-        controls.setPivotX(dp(250));
-        controls.setPivotY(0f);
-        controls.setScaleX(.96f);
-        controls.setScaleY(.94f);
+        // The geometry below is written at its final size. The panel used to be drawn through a
+        // leftover 0.96/0.94 entrance scale anchored on its top-right corner; these numbers are
+        // the ones that were actually rendered, so removing the scale changes nothing on screen.
         sheet.addView(controls, new FrameLayout.LayoutParams(-1, -1));
         FrameLayout panel = new FrameLayout(activity);
-        panel.setBackground(glass.material(panel, dp(20), false));
-        put(panel, 0, 32, 250, 254);
+        panel.setBackground(glass.material(panel, dp(19.2f), false));
+        put(panel, 10f, 30.1f, 240f, 238.8f);
         FrameLayout.LayoutParams place = new FrameLayout.LayoutParams(dp(250), dp(286), Gravity.TOP | Gravity.END);
         place.setMargins(0, dp(36), dp(32), 0);
         overlay.addView(sheet, place);
@@ -87,15 +86,15 @@ final class ControlPanel {
         controlFocus.setBackgroundColor(Color.TRANSPARENT);
         controlFocus.setAlpha(0f);
         sheet.addView(controlFocus, new FrameLayout.LayoutParams(dp(28), dp(28)));
-        tile(POWER, "Alimentation", null, R.drawable.ic_power, actions[POWER], 12, 44, 109, 112, true);
-        tile(SETTINGS, "Réglages", null, R.drawable.ic_settings, actions[SETTINGS], 129, 104, 109, 52, false);
-        tile(WIFI, "Wi-Fi", wifiName, R.drawable.ic_wifi, actions[WIFI], 129, 44, 109, 52, false);
-        tile(AUDIO, "Audio", null, R.drawable.ic_sound, actions[AUDIO], 12, 164, 109, 52, false);
-        tile(TIMER, "Minuteur", null, R.drawable.ic_timer, actions[TIMER], 129, 164, 109, 52, false);
-        circle(DEVICES, "Manettes et accessoires Bluetooth", R.drawable.ic_gamepad, actions[DEVICES], 13);
-        circle(CAPTIONS, "Sous-titres", R.drawable.ic_accessibility, actions[CAPTIONS], 71);
-        circle(SOURCES, "Sources HDMI et AV", R.drawable.ic_input, actions[SOURCES], 129);
-        circle(APPS, "Applications (appui long : infos de l’app sélectionnée)", R.drawable.ic_apps, actions[APPS], 187);
+        tile(POWER, "Alimentation", null, R.drawable.ic_power, actions[POWER], 21.5f, 41.4f, 104.6f, 105.3f, true);
+        tile(SETTINGS, "Réglages", null, R.drawable.ic_settings, actions[SETTINGS], 133.8f, 97.8f, 104.6f, 48.9f, false);
+        tile(WIFI, "Wi-Fi", wifiName, R.drawable.ic_wifi, actions[WIFI], 133.8f, 41.4f, 104.6f, 48.9f, false);
+        tile(AUDIO, "Audio", null, R.drawable.ic_sound, actions[AUDIO], 21.5f, 154.2f, 104.6f, 48.9f, false);
+        tile(TIMER, "Minuteur", null, R.drawable.ic_timer, actions[TIMER], 133.8f, 154.2f, 104.6f, 48.9f, false);
+        circle(DEVICES, "Manettes et accessoires Bluetooth", R.drawable.ic_gamepad, actions[DEVICES], 22.5f);
+        circle(CAPTIONS, "Sous-titres", R.drawable.ic_accessibility, actions[CAPTIONS], 78.2f);
+        circle(SOURCES, "Sources HDMI et AV", R.drawable.ic_input, actions[SOURCES], 133.8f);
+        circle(APPS, "Applications (appui long : infos de l’app sélectionnée)", R.drawable.ic_apps, actions[APPS], 189.5f);
 
         for (int i = 0; i < buttons.length; i++) {
             final int index = i;
@@ -162,30 +161,30 @@ final class ControlPanel {
     }
 
     private void tile(int index, String label, String detail, int icon, Runnable action,
-                      int x, int y, int width, int height, boolean large) {
+                      float x, float y, float width, float height, boolean large) {
         LinearLayout tile = new LinearLayout(activity);
         tile.setOrientation(large ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
         tile.setGravity(Gravity.CENTER);
-        tile.setPadding(dp(large ? 6 : 12), 0, dp(large ? 6 : 9), 0);
-        prepare(tile, index, label, action, large ? 12 : 9);
+        tile.setPadding(dp(large ? 5.8f : 11.5f), 0, dp(large ? 5.6f : 8.6f), 0);
+        prepare(tile, index, label, action, large ? 11.3f : 8.6f);
         ImageView image = icon(icon, index == WIFI ? 0xFF42A5FF : Color.WHITE);
-        int size = large ? 54 : 24;
+        float size = large ? 51.3f : 22.8f;
         tile.addView(image, new LinearLayout.LayoutParams(dp(size), dp(size)));
         LinearLayout texts = new LinearLayout(activity);
         texts.setOrientation(LinearLayout.VERTICAL);
         texts.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = text(label, large ? 12 : 13);
+        TextView title = text(label, large ? 11.3f : 12.2f);
         title.setMaxLines(2);
         texts.addView(title);
         if (detail != null && !detail.isEmpty()) {
-            TextView subtitle = text(detail, 11);
+            TextView subtitle = text(detail, 10.3f);
             subtitle.setTextColor(0xCFFFFFFF);
             subtitle.setMaxLines(1);
             subtitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
             texts.addView(subtitle);
         }
         LinearLayout.LayoutParams caption = new LinearLayout.LayoutParams(large ? -2 : 0, -2, large ? 0 : 1);
-        if (large) caption.topMargin = dp(10); else caption.leftMargin = dp(8);
+        if (large) caption.topMargin = dp(9.4f); else caption.leftMargin = dp(7.7f);
         tile.addView(texts, caption);
         tile.setOnFocusChangeListener((v, focused) -> {
             image.setColorFilter(focused ? FrostedControls.CONTROL_BUTTON_TINT : (index == WIFI ? 0xFF42A5FF : Color.WHITE));
@@ -197,20 +196,20 @@ final class ControlPanel {
         put(tile, x, y, width, height);
     }
 
-    private void circle(int index, String label, int icon, Runnable action, int x) {
+    private void circle(int index, String label, int icon, Runnable action, float x) {
         FrameLayout square = new FrameLayout(activity);
-        prepare(square, index, label, action, 11);
+        prepare(square, index, label, action, 10.3f);
         ImageView image = icon(icon, Color.WHITE);
-        square.addView(image, new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+        square.addView(image, new FrameLayout.LayoutParams(dp(22.8f), dp(22.8f), Gravity.CENTER));
         square.setOnFocusChangeListener((v, focused) -> {
             image.setColorFilter(focused ? FrostedControls.CONTROL_BUTTON_TINT : Color.WHITE);
             v.invalidate();
             onTileFocus(index, focused);
         });
-        put(square, x, 224, 50, 50);
+        put(square, x, 210.6f, 48f, 47f);
     }
 
-    private void prepare(View view, int index, String label, Runnable action, int radius) {
+    private void prepare(View view, int index, String label, Runnable action, float radius) {
         buttons[index] = view;
         view.setFocusable(true);
         view.setFocusableInTouchMode(true);
@@ -303,7 +302,7 @@ final class ControlPanel {
     }
     void setOnClosed(Runnable listener) { onClosed = listener; }
 
-    private void put(View view, int x, int y, int width, int height) {
+    private void put(View view, float x, float y, float width, float height) {
         FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(dp(width), dp(height));
         layout.leftMargin = dp(x);
         layout.topMargin = dp(y);
@@ -318,7 +317,7 @@ final class ControlPanel {
         return image;
     }
 
-    private TextView text(String label, int size) {
+    private TextView text(String label, float size) {
         TextView view = new TextView(activity);
         view.setText(label);
         view.setTextSize(size);

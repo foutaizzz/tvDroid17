@@ -290,14 +290,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View controlButton = findViewById(R.id.btnSettings);
         if (controlButton != null) {
             // Preserve the existing right-side icon position; inset only its circular backdrop.
-            controlButton.setTranslationX(5f * density);
+            controlButton.setTranslationX(5.5f * density);
             int inset = Math.round(CONTROL_BUTTON_INSET_DP * density);
             controlButtonMaterial = new InsetDrawable(
                     dockDecoration.controlButtonMaterial(controlButton, 14f), inset);
             GradientDrawable white = new GradientDrawable();
             white.setShape(GradientDrawable.OVAL);
             white.setColor(Color.WHITE);
-            controlButtonWhite = new InsetDrawable(white, inset);
+            // The frosted surface insets its own area by 0.75px (FrostedControls), so the white
+            // circle takes the same hairline: both end up exactly the same size.
+            controlButtonWhite = new InsetDrawable(white, inset + 1, inset + 1, inset + 1, inset + 1);
             controlButton.setBackground(null);
             controlButton.setOnFocusChangeListener((v, focused) -> updateControlButtonAppearance());
         }
