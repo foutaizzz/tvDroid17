@@ -68,10 +68,13 @@ final class InputsPanel {
     void show() {
         if (isShowing()) return;
         View panel = activity.getLayoutInflater().inflate(R.layout.popup_inputs, null, false);
-        panel.setBackground(glass.material(panel, 20f, false));
+        // The radius is in pixels, like in the control centre: 20dp, not 20px.
+        panel.setBackground(glass.material(panel, 20f * density, false));
         LinearLayout rows = panel.findViewById(R.id.rows);
 
-        int width = Math.max(anchor.getWidth(), (int) (150 * density));
+        // The rows are as wide as the control centre's rectangular tiles: 109dp scaled by 0.96.
+        int rowWidth = Math.round(104.6f * density);
+        int width = rowWidth + Math.round(24 * density);   // 12dp of panel padding on each side
         final PopupWindow p = new PopupWindow(panel, width, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         popup = p;
         p.setOnDismissListener(() -> {
@@ -137,10 +140,6 @@ final class InputsPanel {
             return;
         }
 
-        // Fit the widest row so port names are never squeezed out.
-        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        p.setWidth(Math.max(width, panel.getMeasuredWidth()));
-
         panel.setAlpha(0f);
         panel.setPivotY(0f);
         panel.setScaleY(0.92f);
@@ -153,10 +152,10 @@ final class InputsPanel {
 
     private void addRow(LinearLayout rows, PopupWindow p, int iconRes, String title, int state, Runnable action) {
         View row = activity.getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        Drawable idleBackground = glass.material(row, 13f, FrostedControls.CONTROL_BUTTON_TINT);
+        Drawable idleBackground = glass.material(row, 9f * density, FrostedControls.CONTROL_BUTTON_TINT);
         GradientDrawable focusedBackground = new GradientDrawable();
         focusedBackground.setColor(Color.WHITE);
-        focusedBackground.setCornerRadius(13f * density);
+        focusedBackground.setCornerRadius(9f * density);
         row.setBackground(idleBackground);
         row.setOnFocusChangeListener((v, focused) ->
                 v.setBackground(focused ? focusedBackground : idleBackground));
@@ -187,7 +186,9 @@ final class InputsPanel {
             return false;
         });
         LinearLayout.LayoutParams rowParams = (LinearLayout.LayoutParams) row.getLayoutParams();
-        rowParams.setMargins(0, Math.round(3 * density), 0, Math.round(3 * density));
+        // 4dp above and below each row: the visible gap between two rows is 8dp,
+        // the same spacing as between the tiles of the control centre.
+        rowParams.setMargins(0, Math.round(4 * density), 0, Math.round(4 * density));
         rows.addView(row, rowParams);
     }
 
