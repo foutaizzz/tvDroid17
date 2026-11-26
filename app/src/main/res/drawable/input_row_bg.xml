@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <solid android:color="#FFFFFFFF" />
-    <corners android:radius="13dp" />
+    <!-- Placeholder only: the row background is replaced at runtime by the frosted material
+         (9dp) and by the white focused rectangle (9dp), like the control centre tiles. -->
+    <corners android:radius="9dp" />
 </shape>
 
