@@ -193,7 +193,8 @@ final class ArtworkSlideshow {
                     // until another one is ready; pause/offline still release all artwork.
                     view.resolvePendingTitle();
                     consecutiveFailures++;
-                    long retry = Math.min(INTERVAL_MS, 1_000L << Math.min(4, consecutiveFailures - 1));
+                    // A missing poster must not hold the screen: try the next one every second.
+                    long retry = Math.min(1_000L, 1_000L << Math.min(4, consecutiveFailures - 1));
                     scheduleNext(retry);
                 });
             }

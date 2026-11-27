@@ -207,10 +207,14 @@ public class DeviceSettingsActivity extends Activity {
         }
         row("Configurer la connexion",null,"Modifiez les paramètres du réseau.",R.drawable.ic_wifi,()->open(new Intent(Settings.ACTION_WIFI_SETTINGS)));
     }
-    private void link(String title,String detail,int icon,String destination) {
-        row(title,null,detail,icon,()->showPage(destination));
+    private void link(String title,String detail,int cardIcon,String destination) {
+        row(title,null,detail,cardIcon,()->showPage(destination));
     }
-    private void row(String label,String value,String help,int icon,Runnable action) {
+    /**
+     * A row of the list. It shows no icon of its own: {@code cardIcon} is the one drawn in the
+     * card at the top of the page, and it changes when the row takes the focus.
+     */
+    private void row(String label,String value,String help,int cardIcon,Runnable action) {
         android.text.TextPaint measure=new android.text.TextPaint();
         measure.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));
         measure.setTextSize(19*getResources().getDisplayMetrics().scaledDensity);
@@ -244,7 +248,7 @@ public class DeviceSettingsActivity extends Activity {
             title.setTextColor(focused?0xFF111113:0xFFF5F5F7);
             if(focusDetail!=null) focusDetail.setTextColor(0xFF8E8E93);
             if(focusArrow!=null) focusArrow.setColorFilter(focused?0xFF6E6E73:0xFF8E8E93);
-            if(focused){illustration.setImageResource(icon);description.setText(value==null?help:value+"\n"+help);}
+            if(focused){illustration.setImageResource(cardIcon);description.setText(value==null?help:value+"\n"+help);}
         });
         if(action!=null)row.setOnClickListener(v->action.run());
     }

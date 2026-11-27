@@ -20,6 +20,8 @@ import java.util.List;
 /** Public metadata and in-memory artwork only. No credentials, files or HTTP disk cache. */
 final class CinemetaClient {
     private static final String BASE = "https://v3-cinemeta.strem.io";
+    /** The panel is 1920x1080; backdrops are scaled to exactly that size. */
+    private static final int SCREEN_WIDTH = 1920, SCREEN_HEIGHT = 1080;
     private volatile HttpURLConnection activeConnection;
 
     static final class Frame {
@@ -76,19 +78,42 @@ final class CinemetaClient {
     Frame loadBackground(ArtworkPolicy.Item item) throws IOException {
         try {
             Bitmap backdrop = decode(request(item.background, true, 8_000_000), 1920, 1080, false);
-            return new Frame(item, backdrop, null);
+            return new Frame(item, fitToScreen(backdrop), null);
         } catch (IOException unavailableBackground) {
             if (Thread.currentThread().isInterrupted()) throw unavailableBackground;
             String poster = ArtworkPolicy.posterUrl(item);
             if (poster.isEmpty() || poster.equals(item.background)) throw unavailableBackground;
             try {
                 Bitmap fallback = decode(request(poster, true, 4_000_000), 800, 1200, false);
-                return new Frame(item, fallback, null);
+                return new Frame(item, fitToScreen(fallback), null);
             } catch (IOException unavailablePoster) {
                 unavailablePoster.addSuppressed(unavailableBackground);
                 throw unavailablePoster;
             }
         }
+    }
+
+    /**
+     * Scales a backdrop to exactly the screen size, so the artwork covers the panel without the
+     * view having to crop a smaller source, and a bigger one is never stretched.
+     */
+    private static Bitmap fitToScreen(Bitmap source) {
+        if (source == null) return null;
+        if (source.getWidth() == SCREEN_WIDTH && source.getHeight() == SCREEN_HEIGHT) return source;
+        Bitmap scaled = Bitmap.createBitmap(SCREEN_WIDTH, SCREEN_HEIGHT, Bitmap.Config.RGB_565);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(scaled);
+        android.graphics.Paint paint = new android.graphics.Paint(
+                android.graphics.Paint.ANTI_ALIAS_FLAG | android.graphics.Paint.FILTER_BITMAP_FLAG);
+        // Center crop: fill the screen and cut the overflow, like the view does.
+        float scale = Math.max(SCREEN_WIDTH / (float) source.getWidth(),
+                SCREEN_HEIGHT / (float) source.getHeight());
+        float width = source.getWidth() * scale, height = source.getHeight() * scale;
+        android.graphics.RectF target = new android.graphics.RectF(
+                (SCREEN_WIDTH - width) / 2f, (SCREEN_HEIGHT - height) / 2f,
+                (SCREEN_WIDTH + width) / 2f, (SCREEN_HEIGHT + height) / 2f);
+        canvas.drawBitmap(source, null, target, paint);
+        if (source != scaled) source.recycle();
+        return scaled;
     }
 
     Bitmap loadLogo(ArtworkPolicy.Item item) throws IOException {
