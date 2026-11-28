@@ -348,6 +348,22 @@ public class ArtworkBackdropView extends FrameLayout {
         notifyVisualChanged();
     }
 
+    private long lastGlassNotify;
+    /**
+     * The frosted glass shows a copy of the artwork behind it. When the backdrop blurs, the
+     * glass has to be captured again, or it keeps showing the sharp artwork for a whole slide
+     * while the screen behind it is blurred. Capturing a view costs a few frames on the UI
+     * thread, so the glass is recaptured three times over the 300 ms fade: enough to follow
+     * the blur without stuttering the move of the focus.
+     */
+    private void notifyGlassChanged() {
+        contentRevision++;
+        long now = SystemClock.uptimeMillis();
+        if (now - lastGlassNotify < 100) return;
+        lastGlassNotify = now;
+        notifyVisualChanged();
+    }
+
     private void notifyVisualChanged() {
         if (dockVisualChanged != null) dockVisualChanged.run();
         if (visualChanged != null) visualChanged.run();
@@ -609,14 +625,18 @@ public class ArtworkBackdropView extends FrameLayout {
                 blurredPicture.setVisibility(VISIBLE);
                 blurredPicture.animate().alpha(1f).withLayer().setDuration(BACKDROP_BLUR_FADE_MS)
                         .setInterpolator(new DecelerateInterpolator(1.3f))
-                        .setUpdateListener(animation -> notifyVisualChangedThrottled())
-                        .withEndAction(ArtworkBackdropView.this::notifyVisualChanged).start();
+                        .setUpdateListener(animation -> notifyGlassChanged())
+                        .withEndAction(() -> {
+                            contentRevision++;
+                            notifyVisualChanged();
+                        }).start();
             } else if (blurredPicture.getVisibility() == VISIBLE) {
                 blurredPicture.animate().alpha(0f).withLayer().setDuration(BACKDROP_BLUR_FADE_MS)
                         .setInterpolator(new DecelerateInterpolator(1.3f))
-                        .setUpdateListener(animation -> notifyVisualChangedThrottled())
+                        .setUpdateListener(animation -> notifyGlassChanged())
                         .withEndAction(() -> {
                             if (!backdropBlurred) blurredPicture.setVisibility(GONE);
+                            contentRevision++;
                             notifyVisualChanged();
                         }).start();
             }

@@ -25,7 +25,7 @@ final class FrostedControls {
     static final int CONTROL_BUTTON_TINT = 0xF00B0C08;
     private Bitmap backdrop;
     private Bitmap previous;
-    private Canvas previousCanvas;
+    private Bitmap spare1, spare2;
     private float blend = 1f;
     private ArtworkBackdropView capturedOwner;
     private long capturedFrame = -1, capturedContent = -1;
@@ -76,12 +76,24 @@ final class FrostedControls {
     /** Keeps the current backdrop as the first image of the glass's blend. */
     private void keepAsPrevious() {
         if (backdrop == null) return;
-        if (previous == null || previous.getWidth() != backdrop.getWidth() || previous.getHeight() != backdrop.getHeight()) {
-            previous = Bitmap.createBitmap(backdrop.getWidth(), backdrop.getHeight(), Bitmap.Config.ARGB_8888);
-            previousCanvas = new Canvas(previous);
-        }
-        previousCanvas.drawColor(android.graphics.Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR);
-        previousCanvas.drawBitmap(backdrop, 0, 0, fullPaint);
+        // A fresh bitmap: the one published before would still be drawn by the renderer, and
+        // copying over it would tear the surface for a frame.
+        previous = Bitmap.createBitmap(backdrop.getWidth(), backdrop.getHeight(), Bitmap.Config.ARGB_8888);
+        new Canvas(previous).drawBitmap(backdrop, 0, 0, fullPaint);
+    }
+
+    /**
+     * A buffer to draw the next capture into. The renderer may still be drawing the image
+     * published a frame or two ago, so a capture never overwrites a buffer in use: the
+     * buffers are rotated and a published one is only reused three captures later.
+     */
+    private Bitmap nextBuffer(int width, int height) {
+        Bitmap target = spare2;
+        spare2 = spare1;
+        spare1 = backdrop;
+        if (target == null || target.getWidth() != width || target.getHeight() != height)
+            target = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        return target;
     }
 
     void capture(View root) {
@@ -95,7 +107,6 @@ final class FrostedControls {
         if (backdrop == null || backdrop.getWidth() != width || backdrop.getHeight() != height) {
             releaseBlur();
             backdrop = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-            captureCanvas = new Canvas(backdrop);
             try {
                 script = RenderScript.create(root.getContext());
                 input = Allocation.createFromBitmap(script, backdrop);
@@ -107,20 +118,23 @@ final class FrostedControls {
                 releaseBlur();
             }
         }
-        captureCanvas.save();
+        // The capture is drawn into another buffer: the renderer may still be drawing the
+        // image published a frame ago, and drawing over it would tear the frosted surface.
+        Bitmap target = nextBuffer(width, height);
+        captureCanvas = new Canvas(target);
         captureCanvas.drawColor(android.graphics.Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR);
         captureCanvas.scale(width / (float) rootWidth, height / (float) rootHeight);
         root.draw(captureCanvas);
-        captureCanvas.restore();
         try {
             if (blur != null) {
-                input.copyFrom(backdrop);
+                input.copyFrom(target);
                 blur.forEach(output);
-                output.copyTo(backdrop);
+                output.copyTo(target);
             }
         } catch (RuntimeException unsupported) {
             releaseBlur();
         }
+        backdrop = target;
         invalidateMaterials();
     }
 
@@ -168,7 +182,7 @@ final class FrostedControls {
         releaseBlur();
         backdrop = null;
         previous = null;
-        previousCanvas = null;
+        spare1 = spare2 = null;
         capturedOwner = null;
         capturedFrame = capturedContent = -1;
         blend = 1f;
