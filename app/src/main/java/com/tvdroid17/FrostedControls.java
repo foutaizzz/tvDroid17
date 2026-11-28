@@ -1,11 +1,12 @@
 package com.tvdroid17;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -41,31 +42,46 @@ final class FrostedControls {
 
     void captureArtwork(ArtworkBackdropView artwork) {
         if (artwork.currentItem() == null) { clear(); return; }
-        View source = artwork.snapshotSource();
-        if (source.getWidth() == 0 || source.getHeight() == 0) return;
         boolean newFrame = capturedOwner != artwork || capturedFrame != artwork.frameRevision();
+        boolean captured = false;
         if (newFrame || capturedContent != artwork.contentRevision() || backdrop == null) {
             if (newFrame && backdrop == null && artwork.snapshotBlend() < 1f) {
                 // A newly opened control centre can arrive halfway through a fade.
                 // It needs both endpoints, just like the dock that was already visible.
                 View outgoing = artwork.previousSnapshotSource();
-                if (outgoing != null && outgoing.getWidth() > 0 && outgoing.getHeight() > 0) capture(outgoing);
-            }
-            if (newFrame && backdrop != null) {
-                if (previous == null || previous.getWidth() != backdrop.getWidth() || previous.getHeight() != backdrop.getHeight()) {
-                    previous = Bitmap.createBitmap(backdrop.getWidth(), backdrop.getHeight(), Bitmap.Config.ARGB_8888);
-                    previousCanvas = new Canvas(previous);
+                if (outgoing != null && outgoing.getWidth() > 0 && outgoing.getHeight() > 0) {
+                    capture(outgoing);
+                    keepAsPrevious();
                 }
-                previousCanvas.drawColor(android.graphics.Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR);
-                previousCanvas.drawBitmap(backdrop, 0, 0, fullPaint);
             }
-            capture(source);
+            if (newFrame && backdrop != null) keepAsPrevious();
+            // One capture per slide, of the artwork as it will be once the fade is over. The
+            // glass then fades between the two images, exactly like the artwork itself, and
+            // no view is captured on the UI thread while the fade runs.
+            artwork.captureOpaque(this);
             capturedOwner = artwork;
             capturedFrame = artwork.frameRevision();
             capturedContent = artwork.contentRevision();
+            captured = true;
         }
         blend = artwork.snapshotBlend();
-        invalidateMaterials();
+        if (captured) invalidateMaterials();
+        else {
+            // Only the blend moved: repaint the glass surfaces alone. Invalidating the whole
+            // window on every frame of the fade would redraw the artwork with it.
+            refreshMaterials();
+        }
+    }
+
+    /** Keeps the current backdrop as the first image of the glass's blend. */
+    private void keepAsPrevious() {
+        if (backdrop == null) return;
+        if (previous == null || previous.getWidth() != backdrop.getWidth() || previous.getHeight() != backdrop.getHeight()) {
+            previous = Bitmap.createBitmap(backdrop.getWidth(), backdrop.getHeight(), Bitmap.Config.ARGB_8888);
+            previousCanvas = new Canvas(previous);
+        }
+        previousCanvas.drawColor(android.graphics.Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR);
+        previousCanvas.drawBitmap(backdrop, 0, 0, fullPaint);
     }
 
     void capture(View root) {
@@ -116,6 +132,11 @@ final class FrostedControls {
         blur = null;
         input = output = null;
         script = null;
+    }
+
+    /** Repaints the glass surfaces alone, without touching the rest of the window. */
+    private void refreshMaterials() {
+        for (Drawable material : materials) material.invalidateSelf();
     }
 
     private void invalidateMaterials() {
@@ -171,15 +192,45 @@ final class FrostedControls {
         return material;
     }
 
-    private final class Material extends Drawable {
-        // Weak so a dismissed panel does not stay alive just because its material is still listed.
+    /**
+     * Fills a surface with a sampled region of a backdrop bitmap. The shader is kept and only
+     * rebound when the bitmap changes, so drawing the frosted surfaces does not allocate.
+     */
+    private static final class SurfaceShader {
+        private final Matrix matrix = new Matrix();
+        BitmapShader shader;
+        private Bitmap bitmap;
+
+        void bind(Bitmap source, Rect src, RectF dst) {
+            if (shader == null || bitmap != source) {
+                shader = new BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                bitmap = source;
+            }
+            // The local matrix of a shader maps the bitmap onto the surface, exactly like a
+            // drawBitmap(bitmap, src, dst) would: canvas = scale * bitmap + offset.
+            float kx = dst.width() / src.width();
+            float ky = dst.height() / src.height();
+            matrix.setValues(new float[]{
+                    kx, 0f, dst.left - kx * src.left,
+                    0f, ky, dst.top - ky * src.top,
+                    0f, 0f, 1f});
+            shader.setLocalMatrix(matrix);
+        }
+    }
+
+    private final class Material extends Drawable {        // Weak so a dismissed panel does not stay alive just because its material is still listed.
         private final java.lang.ref.WeakReference<View> ownerRef;
         private final float radius;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        private final Path path = new Path();
         private final RectF area = new RectF();
         private final Rect source = new Rect();
         private final int[] location = new int[2];
+        // The rounded corners come from the geometry of the draw, not from a path clip.
+        private final SurfaceShader backdropSurface = new SurfaceShader();
+        private final SurfaceShader previousSurface = new SurfaceShader();
+        private Shader veil;
+        private boolean veilFocused;
+        private float veilTop = Float.NaN, veilBottom = Float.NaN;
 
         private final int tintColor;
         private final boolean respondsToFocus;
@@ -200,13 +251,10 @@ final class FrostedControls {
             if (owner == null) return;
             area.set(getBounds());
             area.inset(0.75f, 0.75f);
-            path.reset();
-            path.addRoundRect(area, radius, radius, Path.Direction.CW);
-            canvas.save();
-            canvas.clipPath(path);
+            if (area.width() <= 0f || area.height() <= 0f) return;
             paint.setStyle(Paint.Style.FILL);
             paint.setShader(null);
-            if (backdrop != null) {
+            if (backdrop != null && rootWidth > 0 && rootHeight > 0) {
                 owner.getLocationOnScreen(location);
                 float sx = backdrop.getWidth() / (float) rootWidth;
                 float sy = backdrop.getHeight() / (float) rootHeight;
@@ -215,25 +263,45 @@ final class FrostedControls {
                         Math.round((location[0] - origin[0] + area.right) * sx),
                         Math.round((location[1] - origin[1] + area.bottom) * sy));
                 paint.setColor(0xFFFFFFFF);
-                if (previous != null && blend < 1f) canvas.drawBitmap(previous, source, area, paint);
-                paint.setAlpha(Math.round(255 * blend));
-                canvas.drawBitmap(backdrop, source, area, paint);
-                paint.setAlpha(255);
+                // The surface is painted as a rounded rectangle filled with a shader, instead of
+                // being clipped to a rounded path: a path clip makes the renderer allocate an
+                // offscreen target on every frame, which showed up as jank on this television.
+                if (source.width() > 0 && source.height() > 0) {
+                    if (previous != null && blend < 1f) {
+                        previousSurface.bind(previous, source, area);
+                        paint.setShader(previousSurface.shader);
+                        canvas.drawRoundRect(area, radius, radius, paint);
+                    }
+                    paint.setAlpha(Math.round(255 * blend));
+                    backdropSurface.bind(backdrop, source, area);
+                    paint.setShader(backdropSurface.shader);
+                    canvas.drawRoundRect(area, radius, radius, paint);
+                    paint.setAlpha(255);
+                }
             }
+            paint.setShader(null);
             boolean focused = respondsToFocus && owner.isFocused();
             paint.setColor(focused ? 0xFFF1F1E9 : tintColor);
-            canvas.drawRect(area, paint);
-            paint.setShader(new LinearGradient(0, area.top, 0, area.bottom,
-                    focused ? 0x2FFFFFFF : 0x10FFFFFF,
-                    focused ? 0x12FFFFFF : 0x03FFFFFF, Shader.TileMode.CLAMP));
-            canvas.drawRect(area, paint);
-            canvas.restore();
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(owner.getResources().getDisplayMetrics().density * (focused ? 1.1f : 0.65f));
-            paint.setShader(new LinearGradient(area.left, area.top, area.right, area.bottom,
-                    0x00000000, 0x00000000, Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(area, radius, radius, paint);
+            // The veil is cached: the same gradient was rebuilt on every frame of every
+            // surface, and the band it covers is redrawn as often as the artwork animates.
+            paint.setShader(veil(focused));
             canvas.drawRoundRect(area, radius, radius, paint);
             paint.setShader(null);
+        }
+
+        /** The white veil over the frosted surface, rebuilt only when its bounds or its
+         *  focus state change. */
+        private Shader veil(boolean focused) {
+            if (veil == null || veilFocused != focused || veilTop != area.top || veilBottom != area.bottom) {
+                veil = new LinearGradient(0, area.top, 0, area.bottom,
+                        focused ? 0x2FFFFFFF : 0x10FFFFFF,
+                        focused ? 0x12FFFFFF : 0x03FFFFFF, Shader.TileMode.CLAMP);
+                veilFocused = focused;
+                veilTop = area.top;
+                veilBottom = area.bottom;
+            }
+            return veil;
         }
 
         @Override public boolean isStateful() { return true; }

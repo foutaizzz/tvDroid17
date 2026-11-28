@@ -76,11 +76,25 @@ final class CinemetaClient {
     }
 
     Frame loadBackground(ArtworkPolicy.Item item) throws IOException {
+        IOException unavailableLarge = null;
+        String large = ArtworkPolicy.largeBackground(item);
+        if (!large.isEmpty() && !large.equals(item.background)) {
+            try {
+                // The catalogue points at the 1280 px version, stretched to the panel. The large
+                // one is 3840 px: halved by the decoder, it lands on 1920 px exactly.
+                Bitmap backdrop = decode(request(large, true, 8_000_000), 1920, 1080, false);
+                return new Frame(item, fitToScreen(backdrop), null);
+            } catch (IOException unavailable) {
+                if (Thread.currentThread().isInterrupted()) throw unavailable;
+                unavailableLarge = unavailable;
+            }
+        }
         try {
             Bitmap backdrop = decode(request(item.background, true, 8_000_000), 1920, 1080, false);
             return new Frame(item, fitToScreen(backdrop), null);
         } catch (IOException unavailableBackground) {
             if (Thread.currentThread().isInterrupted()) throw unavailableBackground;
+            if (unavailableLarge != null) unavailableBackground.addSuppressed(unavailableLarge);
             String poster = ArtworkPolicy.posterUrl(item);
             if (poster.isEmpty() || poster.equals(item.background)) throw unavailableBackground;
             try {
@@ -230,9 +244,14 @@ final class CinemetaClient {
         options.inJustDecodeBounds = true;
         BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
         if (options.outWidth <= 0 || options.outHeight <= 0) throw new IOException("Invalid image");
+        // Decode a little above the panel size, then scale down. A full-resolution 4K source would
+        // cost 16 MB on a television that has barely 120 MB free; a 3840 px source still lands
+        // exactly on 1920 px after one halving, so it stays sharp.
+        int maxWidth = width + width / 3;
+        int maxHeight = height + height / 3;
         options.inSampleSize = 1;
-        while (options.outWidth / options.inSampleSize > width * 2
-                || options.outHeight / options.inSampleSize > height * 2) options.inSampleSize *= 2;
+        while (options.outWidth / options.inSampleSize > maxWidth
+                || options.outHeight / options.inSampleSize > maxHeight) options.inSampleSize *= 2;
         options.inJustDecodeBounds = false;
         options.inPreferredConfig = alpha ? Bitmap.Config.ARGB_8888 : Bitmap.Config.RGB_565;
         Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);

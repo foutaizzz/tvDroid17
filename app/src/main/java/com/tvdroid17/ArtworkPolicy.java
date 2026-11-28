@@ -46,6 +46,21 @@ final class ArtworkPolicy {
         return "https://images.metahub.space/poster/medium/" + item.id + "/img";
     }
 
+    /**
+     * The largest background the artwork server offers. The catalogue points at the 1280 px
+     * version, which has to be stretched to the 1920 px panel; the large one is 3840 px and
+     * lands on exactly 1920 px once the decoder halves it. An empty string means the
+     * catalogue URL is not a known artwork server, and must be used as it is.
+     */
+    static String largeBackground(Item item) {
+        if (item == null || item.background == null) return "";
+        String background = item.background;
+        int marker = background.indexOf("/background/medium/");
+        if (marker < 0) return "";
+        return background.substring(0, marker) + "/background/large/"
+                + background.substring(marker + "/background/medium/".length());
+    }
+
     static boolean canAutoAdvance(boolean held) {
         return !held;
     }

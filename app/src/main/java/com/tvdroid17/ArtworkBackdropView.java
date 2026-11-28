@@ -182,6 +182,19 @@ public class ArtworkBackdropView extends FrameLayout {
 
     ArtworkPolicy.Item currentItem() { return item; }
 
+    /**
+     * Captures the incoming artwork for the frosted glass, without its fade alpha: the glass
+     * blends two still images, so it needs the slide as it will be, not half faded.
+     */
+    void captureOpaque(FrostedControls glass) {
+        Layer layer = front < 0 ? null : layers[front];
+        if (layer == null) return;
+        float alpha = layer.getAlpha();
+        if (alpha < 1f) layer.setAlpha(1f);
+        try { glass.capture(layer); }
+        finally { if (alpha < 1f) layer.setAlpha(alpha); }
+    }
+
     void setTestBackground(Bitmap bitmap) {
         if (!BuildConfig.DEBUG) return;
         testBackground = bitmap;
@@ -323,10 +336,14 @@ public class ArtworkBackdropView extends FrameLayout {
     void setDockVisualChangedListener(Runnable listener) { dockVisualChanged = listener; }
 
     private long lastFrameNotify;
-    /** Per-frame callback during a crossfade: 10 fps is plenty for the blurred dock blend. */
+    /**
+     * The frosted glass follows the artwork's fade, so it has to be repainted while the fade
+     * runs. Every other frame is enough for a blurred surface, and it halves the price of
+     * redrawing the dock band on this television.
+     */
     private void notifyVisualChangedThrottled() {
         long now = SystemClock.uptimeMillis();
-        if (now - lastFrameNotify < 100) return;
+        if (now - lastFrameNotify < 32) return;
         lastFrameNotify = now;
         notifyVisualChanged();
     }
